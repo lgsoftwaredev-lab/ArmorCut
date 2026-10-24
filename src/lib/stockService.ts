@@ -1,92 +1,92 @@
 import { PPFRoll, PPFJobConsumption, PPFOffcut, PPFShopSettings, ScrapReason } from '@/types/ppf';
 import { supabase, isSupabaseConfigured } from './supabase';
 
-// Mock initial data used when Supabase is not configured yet or as fallback
+// Mock initial data: 100% Kryptonite PPF (156cm y 120cm x 15m)
 const INITIAL_ROLLS: PPFRoll[] = [
   {
     id: 'roll-1',
-    code: 'XP-GL-01',
-    brand: 'XPEL',
-    model: 'Ultimate Plus 8mil',
+    code: 'KRYP-GL-01',
+    brand: 'Kryptonite',
+    model: 'Ultra Gloss (Carrocería)',
     finish: 'GLOSS',
-    widthMeters: 1.52,
+    widthMeters: 1.56,
     initialMeters: 15.0,
-    currentMeters: 11.2,
-    costPerRoll: 1350,
+    currentMeters: 10.8,
+    costPerRoll: 1300,
     currency: 'USD',
-    batchNumber: 'LOT-98214',
+    batchNumber: 'KRYP-2026-A1',
     location: 'Rack A - Nivel 1',
     status: 'ACTIVE',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
-    notes: 'Bobina principal para capots y paragolpes frontales',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
+    notes: 'Bobina principal para capots, paragolpes y kits frontales',
   },
   {
     id: 'roll-2',
-    code: 'ST-DY-02',
-    brand: 'STEK',
-    model: 'DYNOshield',
-    finish: 'GLOSS',
-    widthMeters: 1.52,
+    code: 'KRYP-MT-02',
+    brand: 'Kryptonite',
+    model: 'Satin Matte',
+    finish: 'MATTE',
+    widthMeters: 1.56,
     initialMeters: 15.0,
-    currentMeters: 4.3,
-    costPerRoll: 1400,
+    currentMeters: 4.2,
+    costPerRoll: 1450,
     currency: 'USD',
-    batchNumber: 'LOT-84311',
+    batchNumber: 'KRYP-2026-M4',
     location: 'Rack A - Nivel 2',
     status: 'ACTIVE',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8).toISOString(),
-    notes: 'Excelente hidrofobia y brillo profundo',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
+    notes: 'Para terminaciones satinadas y autos mate',
   },
   {
     id: 'roll-3',
-    code: 'XP-ST-03',
-    brand: 'XPEL',
-    model: 'Stealth Matte',
-    finish: 'MATTE',
-    widthMeters: 1.52,
+    code: 'KRYP-WP-03',
+    brand: 'Kryptonite',
+    model: 'Windshield Armor (Parabrisas)',
+    finish: 'WINDSHIELD',
+    widthMeters: 1.20,
     initialMeters: 15.0,
-    currentMeters: 2.1,
-    costPerRoll: 1550,
+    currentMeters: 12.0,
+    costPerRoll: 1100,
     currency: 'USD',
-    batchNumber: 'LOT-77402',
-    location: 'Rack B - Nivel 1',
+    batchNumber: 'KRYP-WP-89',
+    location: 'Rack Vidrios',
     status: 'ACTIVE',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15).toISOString(),
-    notes: 'ALERTA: Quedan pocos metros para trabajos grandes',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(),
+    notes: 'Medida 1.20m x 15m exclusiva para protección de parabrisas',
   },
   {
     id: 'roll-4',
-    code: '3M-SC-04',
-    brand: '3M',
-    model: 'Scotchgard Pro 200',
-    finish: 'GLOSS',
-    widthMeters: 0.91,
-    initialMeters: 30.0,
-    currentMeters: 24.5,
-    costPerRoll: 1200,
-    currency: 'USD',
-    batchNumber: 'LOT-3M-119',
-    location: 'Rack B - Nivel 2',
-    status: 'ACTIVE',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString(),
-    notes: 'Ancho especial para zócalos, ópticas y franjas',
-  },
-  {
-    id: 'roll-5',
-    code: 'ST-BK-05',
-    brand: 'STEK',
-    model: 'DYNOblack Piano',
+    code: 'KRYP-BK-04',
+    brand: 'Kryptonite',
+    model: 'Piano Black',
     finish: 'BLACK_PIANO',
-    widthMeters: 1.52,
+    widthMeters: 1.56,
     initialMeters: 15.0,
     currentMeters: 15.0,
-    costPerRoll: 1600,
+    costPerRoll: 1500,
     currency: 'USD',
-    batchNumber: 'LOT-BK-003',
+    batchNumber: 'KRYP-BK-02',
     location: 'Depósito Sellados',
     status: 'SEALED',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    notes: 'Bobina nueva cerrada para techos y parantes',
+    notes: 'Bobina nueva cerrada para techos y parantes negro brillante',
+  },
+  {
+    id: 'roll-5',
+    code: 'KRYP-GL-05',
+    brand: 'Kryptonite',
+    model: 'Ultra Gloss (Carrocería)',
+    finish: 'GLOSS',
+    widthMeters: 1.56,
+    initialMeters: 15.0,
+    currentMeters: 2.1,
+    costPerRoll: 1300,
+    currency: 'USD',
+    batchNumber: 'KRYP-2025-Z9',
+    location: 'Rack B - Nivel 1',
+    status: 'ACTIVE',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString(),
+    notes: 'ALERTA: Quedan 2.10m. Reservar para piezas chicas o espejos',
   },
 ];
 
@@ -94,9 +94,9 @@ const INITIAL_JOBS: PPFJobConsumption[] = [
   {
     id: 'job-1',
     rollId: 'roll-1',
-    rollCode: 'XP-GL-01',
-    brand: 'XPEL',
-    model: 'Ultimate Plus 8mil',
+    rollCode: 'KRYP-GL-01',
+    brand: 'Kryptonite',
+    model: 'Ultra Gloss (Carrocería)',
     finish: 'GLOSS',
     vehicle: 'Porsche 911 Carrera S',
     licensePlate: 'AF 281 OK',
@@ -104,18 +104,18 @@ const INITIAL_JOBS: PPFJobConsumption[] = [
     workOrderNumber: 'OT-2026-104',
     installer: 'Lucas',
     parts: ['Capot Completo', 'Paragolpes Frontal', 'Espejos'],
-    metersUsed: 3.8,
+    metersUsed: 4.2,
     metersScrap: 0.0,
-    costCalculated: 342.0,
+    costCalculated: 364.0,
     jobDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    notes: 'Instalación impecable sin merma',
+    notes: 'Kit precortado por centro de corte instalado sin problemas',
   },
   {
     id: 'job-2',
-    rollId: 'roll-2',
-    rollCode: 'ST-DY-02',
-    brand: 'STEK',
-    model: 'DYNOshield',
+    rollId: 'roll-1',
+    rollCode: 'KRYP-GL-01',
+    brand: 'Kryptonite',
+    model: 'Ultra Gloss (Carrocería)',
     finish: 'GLOSS',
     vehicle: 'Audi RS3 Sportback',
     licensePlate: 'AE 754 PL',
@@ -123,34 +123,32 @@ const INITIAL_JOBS: PPFJobConsumption[] = [
     workOrderNumber: 'OT-2026-108',
     installer: 'Lucas',
     parts: ['Full Frontal', 'Ópticas', 'Zócalos'],
-    metersUsed: 4.2,
-    metersScrap: 0.5,
+    metersUsed: 4.5,
+    metersScrap: 0.6,
     scrapReason: 'CONTAMINATION',
-    scrapNotes: 'Partícula de polvo en la esquina inferior del capot obligó a repetir pieza',
-    costCalculated: 438.67,
+    scrapNotes: 'Polvo en la esquina inferior del capot obligó a pedir re-corte de la pieza',
+    costCalculated: 442.0,
     jobDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
-    notes: 'Desperdicio registrado y cargado a scrap',
+    notes: 'Re-corte solicitado a centro externo',
   },
   {
     id: 'job-3',
     rollId: 'roll-3',
-    rollCode: 'XP-ST-03',
-    brand: 'XPEL',
-    model: 'Stealth Matte',
-    finish: 'MATTE',
+    rollCode: 'KRYP-WP-03',
+    brand: 'Kryptonite',
+    model: 'Windshield Armor (Parabrisas)',
+    finish: 'WINDSHIELD',
     vehicle: 'BMW M2 Competition',
     licensePlate: 'AG 112 ZZ',
     clientName: 'Ignacio Falcon',
     workOrderNumber: 'OT-2026-115',
     installer: 'Marcos',
-    parts: ['Capot Satinado', 'Guardabarros Delanteros'],
-    metersUsed: 3.6,
-    metersScrap: 0.4,
-    scrapReason: 'STRETCH_TEAR',
-    scrapNotes: 'Exceso de tensión en la curvatura del guardabarros generó línea de estrés',
-    costCalculated: 413.33,
+    parts: ['Parabrisas Completo'],
+    metersUsed: 1.5,
+    metersScrap: 0.0,
+    costCalculated: 110.0,
     jobDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
-    notes: 'Se capacitó sobre técnica de anclaje térmico',
+    notes: 'Colocación de film parabrisas 1.20m',
   },
 ];
 
@@ -158,58 +156,50 @@ const INITIAL_OFFCUTS: PPFOffcut[] = [
   {
     id: 'offcut-1',
     parentRollId: 'roll-1',
-    parentRollCode: 'XP-GL-01',
-    brand: 'XPEL',
+    parentRollCode: 'KRYP-GL-01',
+    brand: 'Kryptonite',
     finish: 'GLOSS',
-    widthCm: 55,
-    lengthCm: 110,
+    widthCm: 50,
+    lengthCm: 120,
     storageLocation: 'Cajón 1 - Retazos Capot',
     suggestedUse: 'Espejos retrovisores o paragolpe inferior',
     status: 'AVAILABLE',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    notes: 'Sobrante limpio del corte de Porsche 911',
+    notes: 'Sobrante limpio devuelto del ploteo de Porsche 911',
   },
   {
     id: 'offcut-2',
     parentRollId: 'roll-2',
-    parentRollCode: 'ST-DY-02',
-    brand: 'STEK',
-    finish: 'GLOSS',
-    widthCm: 35,
-    lengthCm: 80,
-    storageLocation: 'Cajón 2 - Retazos Chicos',
-    suggestedUse: 'Tazas de puertas, pantalla táctil, B-Pillars',
-    status: 'AVAILABLE',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
-    notes: 'Perfecto para interiores de Audi o BMW',
-  },
-  {
-    id: 'offcut-3',
-    parentRollId: 'roll-3',
-    parentRollCode: 'XP-ST-03',
-    brand: 'XPEL',
+    parentRollCode: 'KRYP-MT-02',
+    brand: 'Kryptonite',
     finish: 'MATTE',
     widthCm: 40,
     lengthCm: 95,
     storageLocation: 'Cajón Matte',
     suggestedUse: 'Espejos satinados o detalles de alerón',
     status: 'AVAILABLE',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
     notes: 'Material intacto para piezas chicas',
+  },
+  {
+    id: 'offcut-3',
+    parentRollId: 'roll-3',
+    parentRollCode: 'KRYP-WP-03',
+    brand: 'Kryptonite',
+    finish: 'WINDSHIELD',
+    widthCm: 30,
+    lengthCm: 70,
+    storageLocation: 'Tubo Parabrisas',
+    suggestedUse: 'Pruebas térmicas o visores',
+    status: 'AVAILABLE',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
+    notes: 'Recorte de parabrisas',
   },
 ];
 
-const DEFAULT_SETTINGS: PPFShopSettings = {
-  shopName: process.env.NEXT_PUBLIC_SHOP_NAME || 'PLUSCARS DETAILING',
-  lowStockThresholdMeters: 3.0,
-  currency: 'USD',
-};
-
-// Local storage keys for fallback demo mode
-const LOCAL_STORAGE_KEY_ROLLS = 'armorcut_ppf_rolls_v1';
-const LOCAL_STORAGE_KEY_JOBS = 'armorcut_ppf_jobs_v1';
-const LOCAL_STORAGE_KEY_OFFCUTS = 'armorcut_ppf_offcuts_v1';
-const LOCAL_STORAGE_KEY_SETTINGS = 'armorcut_ppf_settings_v1';
+const LOCAL_STORAGE_KEY_ROLLS = 'armorcut_ppf_rolls_kryptonite_v1';
+const LOCAL_STORAGE_KEY_JOBS = 'armorcut_ppf_jobs_kryptonite_v1';
+const LOCAL_STORAGE_KEY_OFFCUTS = 'armorcut_ppf_offcuts_kryptonite_v1';
 
 export class StockService {
   // Load Rolls
@@ -225,7 +215,7 @@ export class StockService {
           return data.map((r: any) => ({
             id: r.id,
             code: r.code,
-            brand: r.brand,
+            brand: r.brand || 'Kryptonite',
             model: r.model,
             finish: r.finish,
             widthMeters: Number(r.width_meters),
@@ -245,7 +235,6 @@ export class StockService {
       }
     }
 
-    // Local / Demo fallback
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY_ROLLS);
       if (stored) {
@@ -264,6 +253,7 @@ export class StockService {
       ...roll,
       id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `roll-${Date.now()}`,
       createdAt: new Date().toISOString(),
+      brand: roll.brand || 'Kryptonite',
       currentMeters: Number(roll.currentMeters),
       initialMeters: Number(roll.initialMeters),
       costPerRoll: Number(roll.costPerRoll),
@@ -304,7 +294,6 @@ export class StockService {
       }
     }
 
-    // Local fallback
     if (typeof window !== 'undefined') {
       const existing = await this.getRolls();
       const updated = [newRoll, ...existing];
@@ -375,7 +364,7 @@ export class StockService {
             id: j.id,
             rollId: j.roll_id,
             rollCode: j.roll_code,
-            brand: j.brand,
+            brand: j.brand || 'Kryptonite',
             model: j.model || '',
             finish: j.finish,
             vehicle: j.vehicle,
@@ -410,7 +399,7 @@ export class StockService {
     return INITIAL_JOBS;
   }
 
-  // Record a Job (automatically discounts meters and handles scrap & offcuts)
+  // Record a Job
   static async recordJob(
     jobData: Omit<PPFJobConsumption, 'id' | 'costCalculated' | 'jobDate'>,
     createdOffcut?: {
@@ -432,8 +421,7 @@ export class StockService {
     const newCurrentMeters = Math.max(0, Number((roll.currentMeters - totalMetersDeducted).toFixed(2)));
     const newStatus = newCurrentMeters <= 0.05 ? 'DEPLETED' : roll.status;
 
-    // Cost calculation based on cost per meter of the roll
-    const costPerMeter = roll.initialMeters > 0 ? roll.costPerRoll / roll.initialMeters : 0;
+    const costPerMeter = roll.initialMeters > 0 ? roll.costPerRoll / roll.initialMeters : 86.66;
     const totalCost = Number((costPerMeter * totalMetersDeducted).toFixed(2));
 
     const newJob: PPFJobConsumption = {
@@ -451,10 +439,8 @@ export class StockService {
       status: newStatus,
     };
 
-    // Update in Supabase
     if (isSupabaseConfigured() && supabase) {
       try {
-        // 1. Insert Job
         const { data: jobRes } = await supabase
           .from('ppf_jobs')
           .insert({
@@ -482,7 +468,6 @@ export class StockService {
           newJob.id = jobRes.id;
         }
 
-        // 2. Update Roll meters
         await supabase
           .from('ppf_rolls')
           .update({
@@ -491,7 +476,6 @@ export class StockService {
           })
           .eq('id', roll.id);
 
-        // 3. Create Offcut if present
         if (createdOffcut && createdOffcut.widthCm > 0 && createdOffcut.lengthCm > 0) {
           await supabase.from('ppf_offcuts').insert({
             parent_roll_id: roll.id,
@@ -512,7 +496,6 @@ export class StockService {
       }
     }
 
-    // Local / Demo state update
     if (typeof window !== 'undefined') {
       const storedRolls = await this.getRolls();
       const updatedRolls = storedRolls.map((r) => (r.id === roll.id ? updatedRoll : r));
@@ -532,7 +515,7 @@ export class StockService {
           storageLocation: createdOffcut.storageLocation || 'Cajón de Retazos',
           suggestedUse: createdOffcut.suggestedUse || 'Espejos, manijas, ópticas',
           status: 'AVAILABLE',
-          notes: createdOffcut.notes || `Retazo generado en trabajo ${newJob.vehicle}`,
+          notes: createdOffcut.notes || `Retazo devuelto en trabajo ${newJob.vehicle}`,
         });
       }
     }
@@ -554,7 +537,7 @@ export class StockService {
             id: o.id,
             parentRollId: o.parent_roll_id,
             parentRollCode: o.parent_roll_code,
-            brand: o.brand,
+            brand: o.brand || 'Kryptonite',
             finish: o.finish,
             widthCm: Number(o.width_cm),
             lengthCm: Number(o.length_cm),
@@ -587,6 +570,7 @@ export class StockService {
   static async addOffcut(offcut: Omit<PPFOffcut, 'id' | 'createdAt'>): Promise<PPFOffcut> {
     const newOffcut: PPFOffcut = {
       ...offcut,
+      brand: offcut.brand || 'Kryptonite',
       id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `offcut-${Date.now()}`,
       createdAt: new Date().toISOString(),
     };
@@ -625,7 +609,7 @@ export class StockService {
     return newOffcut;
   }
 
-  // Update Offcut status (e.g. mark as USED or DISCARDED)
+  // Update Offcut
   static async updateOffcutStatus(id: string, status: 'AVAILABLE' | 'USED' | 'DISCARDED', notes?: string): Promise<void> {
     if (isSupabaseConfigured() && supabase) {
       try {
@@ -661,7 +645,7 @@ export class StockService {
     }
   }
 
-  // Compute advanced statistics & KPIs
+  // Stats calculation
   static calculateStats(rolls: PPFRoll[], jobs: PPFJobConsumption[], offcuts: PPFOffcut[], lowStockThreshold = 3.0) {
     const totalRolls = rolls.length;
     const activeRolls = rolls.filter((r) => r.status === 'ACTIVE').length;
@@ -679,28 +663,25 @@ export class StockService {
     const estimatedInventoryValue = rolls
       .filter((r) => r.status !== 'DEPLETED')
       .reduce((acc, r) => {
-        const costPerM = r.initialMeters > 0 ? r.costPerRoll / r.initialMeters : 0;
+        const costPerM = r.initialMeters > 0 ? r.costPerRoll / r.initialMeters : 86.66;
         return acc + costPerM * Number(r.currentMeters);
       }, 0);
 
-    // Job Metrics
     const totalMetersUsed = jobs.reduce((acc, j) => acc + Number(j.metersUsed), 0);
     const totalMetersScrap = jobs.reduce((acc, j) => acc + Number(j.metersScrap || 0), 0);
     const totalMetersCut = totalMetersUsed + totalMetersScrap;
 
     const overallScrapRate = totalMetersCut > 0 ? (totalMetersScrap / totalMetersCut) * 100 : 0;
 
-    // Total cost wasted on scrap
     const totalScrapCostWasted = jobs.reduce((acc, j) => {
       if (j.metersScrap && j.metersScrap > 0) {
         const roll = rolls.find((r) => r.id === j.rollId || r.code === j.rollCode);
-        const costPerM = roll && roll.initialMeters > 0 ? roll.costPerRoll / roll.initialMeters : 90;
+        const costPerM = roll && roll.initialMeters > 0 ? roll.costPerRoll / roll.initialMeters : 86.66;
         return acc + costPerM * j.metersScrap;
       }
       return acc;
     }, 0);
 
-    // Installer Metrics
     const installerMap: {
       [name: string]: {
         jobsCount: number;
@@ -720,7 +701,7 @@ export class StockService {
       installerMap[name].metersScrap += Number(j.metersScrap || 0);
 
       const roll = rolls.find((r) => r.id === j.rollId || r.code === j.rollCode);
-      const costPerM = roll && roll.initialMeters > 0 ? roll.costPerRoll / roll.initialMeters : 90;
+      const costPerM = roll && roll.initialMeters > 0 ? roll.costPerRoll / roll.initialMeters : 86.66;
       installerMap[name].costWasted += costPerM * Number(j.metersScrap || 0);
     });
 
@@ -737,7 +718,6 @@ export class StockService {
       };
     }).sort((a, b) => a.wasteRatePercent - b.wasteRatePercent);
 
-    // Scrap Reasons breakdown
     const scrapReasonsMap: { [reason: string]: { count: number; meters: number } } = {};
     jobs.forEach((j) => {
       if (j.metersScrap && j.metersScrap > 0) {
@@ -750,7 +730,6 @@ export class StockService {
       }
     });
 
-    // Offcuts summary
     const availableOffcuts = offcuts.filter((o) => o.status === 'AVAILABLE');
     const usedOffcuts = offcuts.filter((o) => o.status === 'USED');
 
@@ -773,7 +752,6 @@ export class StockService {
     };
   }
 
-  // Export to CSV helper
   static exportRollsToCSV(rolls: PPFRoll[]): void {
     const headers = ['Codigo', 'Marca', 'Modelo', 'Acabado', 'Ancho (m)', 'Metros Iniciales', 'Metros Restantes', 'Costo Rollo', 'Lote', 'Ubicacion', 'Estado'];
     const rows = rolls.map((r) => [
@@ -790,7 +768,7 @@ export class StockService {
       `"${r.status}"`,
     ]);
 
-    this.downloadCSV('ArmorCut_Bobinas_Stock.csv', [headers.join(','), ...rows.map((row) => row.join(','))].join('\n'));
+    this.downloadCSV('ArmorCut_Kryptonite_Bobinas.csv', [headers.join(','), ...rows.map((row) => row.join(','))].join('\n'));
   }
 
   static exportJobsToCSV(jobs: PPFJobConsumption[]): void {
