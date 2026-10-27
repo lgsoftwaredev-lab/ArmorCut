@@ -14,6 +14,7 @@ import { NewRollModal } from '@/components/NewRollModal';
 import { NewJobModal } from '@/components/NewJobModal';
 import { JobsHistoryView } from '@/components/JobsHistoryView';
 import { MetricsView } from '@/components/MetricsView';
+import { PlusCarsLogo, PlusCarsMonogram } from '@/components/brand/PlusCarsBrand';
 import { 
   Layers, 
   Scissors, 
@@ -317,8 +318,11 @@ export default function ArmorCutDashboard() {
                 background: 'var(--bg-card)',
                 borderRadius: 'var(--radius-lg)',
                 border: '1px solid var(--border-card)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
               }}>
-                <Layers size={40} color="var(--text-dim)" style={{ marginBottom: '12px' }} />
+                <PlusCarsMonogram height={42} style={{ marginBottom: '14px', opacity: 0.8 }} />
                 <h3 style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>No se encontraron bobinas</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                   Ajusta los filtros de búsqueda o agrega una nueva bobina para comenzar a controlar stock.
@@ -367,13 +371,31 @@ export default function ArmorCutDashboard() {
       {/* Footer */}
       <footer style={{
         borderTop: '1px solid var(--border-subtle)',
-        background: 'var(--bg-surface)',
-        padding: '16px 24px',
+        background: 'rgba(10, 13, 18, 0.95)',
+        padding: '24px 20px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
         textAlign: 'center',
-        fontSize: '0.75rem',
-        color: 'var(--text-muted)',
       }}>
-        ARMORCUT PPF • PLUSCARS DETAILING SOFTWARE • MONOLITO SERVERLESS VERCEL & SUPABASE ($0 COSTO)
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Layers size={16} color="var(--accent-red)" />
+            <strong style={{ fontSize: '0.85rem', letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
+              ARMORCUT PPF PRO
+            </strong>
+          </div>
+          <span style={{ color: 'var(--border-subtle)' }}>•</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Desarrollado para</span>
+            <PlusCarsLogo height={16} />
+          </div>
+        </div>
+        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
+          Centro de Instalación Oficial • Sistema de Control de Stock & Cortes de Bobinas PPF
+        </p>
       </footer>
 
       {/* Modals */}

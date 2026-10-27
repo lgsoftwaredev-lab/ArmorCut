@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { PPFRoll, CreateJobInput } from '@/types/ppf';
 import { Scissors, X, Check, Plus } from 'lucide-react';
+import { PlusCarsMonogram } from '@/components/brand/PlusCarsBrand';
 
 interface NewJobModalProps {
   isOpen: boolean;
@@ -179,12 +180,15 @@ const JobModalContent: React.FC<{
               Registrar Salida de Material (Corte)
             </h2>
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
-          >
-            <X size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <PlusCarsMonogram height={22} style={{ opacity: 0.85 }} />
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="modal-body" style={{ padding: '20px 24px' }}>

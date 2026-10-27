@@ -3,6 +3,7 @@
 import React from 'react';
 import { TrendingUp, Users, DollarSign, Layers, AlertCircle, CheckCircle, Car } from 'lucide-react';
 import { PPFStats, InstallerStat, PPFRoll } from '@/types/ppf';
+import { PlusCarsLogo, PlusCarsMonogram } from '@/components/brand/PlusCarsBrand';
 
 interface MetricsViewProps {
   stats: PPFStats;
@@ -10,7 +11,33 @@ interface MetricsViewProps {
 
 export const MetricsView: React.FC<MetricsViewProps> = ({ stats }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Studio Header Banner */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        background: 'var(--bg-card)',
+        padding: '16px 20px',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border-card)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <PlusCarsMonogram height={32} />
+          <div>
+            <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+              Rendimiento & Métricas de Taller
+            </h2>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+              PlusCars Detailing • Centro Oficial de Instalación PPF
+            </p>
+          </div>
+        </div>
+        <PlusCarsLogo height={18} />
+      </div>
+
       {/* 4 Top KPI Cards */}
       <div className="metrics-kpis-grid">
         {/* Card 1: Stock Total */}

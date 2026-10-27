@@ -361,6 +361,22 @@ h1, h2, h3, h4, h5 {
   gap: 14px;
 }
 
+.desktop-cobrand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cobrand-divider {
+  width: 1px;
+  height: 26px;
+  background: var(--border-subtle);
+}
+
+.mobile-only-mono {
+  display: none;
+}
+
 .kpi-bar {
   display: flex;
   align-items: center;
@@ -444,6 +460,15 @@ h1, h2, h3, h4, h5 {
 
   .header-brand-sub {
     font-size: 0.68rem !important;
+  }
+
+  .desktop-cobrand-lockup {
+    display: none !important;
+  }
+
+  .mobile-only-mono {
+    display: inline-flex !important;
+    align-items: center;
   }
 
   .kpi-bar {

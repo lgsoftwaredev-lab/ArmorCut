@@ -4,6 +4,10 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'ArmorCut PPF | PlusCars Detailing - Control de Stock & Cortes',
   description: 'Sistema monolítico de gestión de stock de bobinas de PPF y cortes para vehículos en PlusCars Detailing.',
+  icons: {
+    icon: '/brand/pluscars-monogram.png',
+    apple: '/brand/pluscars-monogram.png',
+  },
 };
 
 export const viewport: Viewport = {

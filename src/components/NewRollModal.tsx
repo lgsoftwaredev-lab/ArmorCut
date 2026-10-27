@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { PPFRoll, PPFFinish, PPFRollStatus, CreateRollInput } from '@/types/ppf';
 import { X, Save, Layers, Check } from 'lucide-react';
+import { PlusCarsMonogram } from '@/components/brand/PlusCarsBrand';
 
 interface NewRollModalProps {
   isOpen: boolean;
@@ -151,18 +152,21 @@ const RollModalContent: React.FC<{
               {editingRoll ? 'Editar Bobina de PPF' : 'Dar de Alta Bobina Kryptonite'}
             </h2>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '4px',
-            }}
-          >
-            <X size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <PlusCarsMonogram height={22} style={{ opacity: 0.85 }} />
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '4px',
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body Form */}

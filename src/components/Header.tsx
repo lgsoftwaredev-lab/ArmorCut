@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layers, Database, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { PlusCarsLogo, PlusCarsMonogram } from '@/components/brand/PlusCarsBrand';
 
 interface HeaderProps {
   shopName: string;
@@ -58,47 +59,71 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="header-inner">
         {/* Top / Brand Row */}
         <div className="header-top-row">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #ff1a3c 0%, #990f23 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 16px rgba(230, 25, 55, 0.45)',
-              flexShrink: 0,
-            }}>
-              <Layers size={22} color="#ffffff" strokeWidth={2.5} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="header-brand-title" style={{
-                  fontSize: '1.2rem',
-                  fontWeight: 800,
-                  letterSpacing: '-0.03em',
-                  background: 'linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}>
-                  ARMORCUT
-                </span>
-                <span style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  padding: '1px 6px',
-                  borderRadius: '4px',
-                  background: 'rgba(230, 25, 55, 0.15)',
-                  color: 'var(--accent-red)',
-                  border: '1px solid rgba(230, 25, 55, 0.35)',
-                  letterSpacing: '0.05em',
-                }}>
-                  PPF PRO
-                </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            {/* ArmorCut Brand */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #ff1a3c 0%, #990f23 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 16px rgba(230, 25, 55, 0.45)',
+                flexShrink: 0,
+              }}>
+                <Layers size={22} color="#ffffff" strokeWidth={2.5} />
               </div>
-              <div className="header-brand-sub" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                {shopName || 'PLUSCARS DETAILING'} • STOCK & CORTES
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="header-brand-title" style={{
+                    fontSize: '1.2rem',
+                    fontWeight: 800,
+                    letterSpacing: '-0.03em',
+                    background: 'linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}>
+                    ARMORCUT
+                  </span>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    background: 'rgba(230, 25, 55, 0.15)',
+                    color: 'var(--accent-red)',
+                    border: '1px solid rgba(230, 25, 55, 0.35)',
+                    letterSpacing: '0.05em',
+                  }}>
+                    PPF PRO
+                  </span>
+                </div>
+                <div className="header-brand-sub" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span className="mobile-only-mono">
+                    <PlusCarsMonogram height={13} style={{ marginRight: '4px' }} />
+                  </span>
+                  <span>{shopName || 'PLUSCARS DETAILING'} • STOCK & CORTES</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Co-Branding Divider & PlusCars Wordmark Logo */}
+            <div className="desktop-cobrand-lockup">
+              <div className="cobrand-divider" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{
+                  fontSize: '0.58rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  color: 'var(--text-muted)',
+                  lineHeight: 1,
+                }}>
+                  Exclusivo
+                </span>
+                <PlusCarsLogo height={18} />
               </div>
             </div>
           </div>
