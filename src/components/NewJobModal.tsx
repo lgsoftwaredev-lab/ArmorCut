@@ -123,13 +123,13 @@ const JobModalContent: React.FC<{
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 50,
+        zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(4px)',
-        padding: '16px',
+        background: 'rgba(0, 0, 0, 0.82)',
+        backdropFilter: 'blur(8px)',
+        padding: '12px',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
