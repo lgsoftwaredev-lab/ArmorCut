@@ -135,13 +135,13 @@ const RollModalContent: React.FC<{
                 width: '36px',
                 height: '36px',
                 borderRadius: 'var(--radius-md)',
-                background: 'rgba(0, 240, 255, 0.1)',
+                background: 'rgba(230, 25, 55, 0.12)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Layers size={20} color="var(--accent-cyan)" />
+              <Layers size={20} color="var(--accent-red)" />
             </div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
               {editingRoll ? 'Editar Bobina de PPF' : 'Dar de Alta Bobina Kryptonite'}
@@ -173,9 +173,9 @@ const RollModalContent: React.FC<{
                   style={{
                     padding: '10px 14px',
                     borderRadius: 'var(--radius-md)',
-                    border: widthMeters === 1.56 ? '1px solid var(--accent-cyan)' : '1px solid var(--border-subtle)',
-                    background: widthMeters === 1.56 ? 'rgba(0, 240, 255, 0.12)' : 'var(--bg-input)',
-                    color: widthMeters === 1.56 ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                    border: widthMeters === 1.56 ? '1px solid var(--accent-red)' : '1px solid var(--border-subtle)',
+                    background: widthMeters === 1.56 ? 'rgba(230, 25, 55, 0.15)' : 'var(--bg-input)',
+                    color: widthMeters === 1.56 ? 'var(--accent-red)' : 'var(--text-secondary)',
                     fontWeight: 600,
                     fontSize: '0.8rem',
                     textAlign: 'left',
@@ -195,9 +195,9 @@ const RollModalContent: React.FC<{
                   style={{
                     padding: '10px 14px',
                     borderRadius: 'var(--radius-md)',
-                    border: widthMeters === 1.20 ? '1px solid var(--accent-cyan)' : '1px solid var(--border-subtle)',
-                    background: widthMeters === 1.20 ? 'rgba(0, 240, 255, 0.12)' : 'var(--bg-input)',
-                    color: widthMeters === 1.20 ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                    border: widthMeters === 1.20 ? '1px solid var(--accent-red)' : '1px solid var(--border-subtle)',
+                    background: widthMeters === 1.20 ? 'rgba(230, 25, 55, 0.15)' : 'var(--bg-input)',
+                    color: widthMeters === 1.20 ? 'var(--accent-red)' : 'var(--text-secondary)',
                     fontWeight: 600,
                     fontSize: '0.8rem',
                     textAlign: 'left',

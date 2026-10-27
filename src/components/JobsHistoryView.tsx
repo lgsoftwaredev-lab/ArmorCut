@@ -122,7 +122,7 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
                 {/* Left: Vehicle & Client */}
                 <div style={{ minWidth: '220px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <Car size={16} color="var(--accent-cyan)" />
+                    <Car size={16} color="var(--accent-red)" />
                     <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{job.vehicle}</strong>
                     {job.licensePlate && (
                       <span className="mono" style={{
@@ -149,8 +149,8 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
                     <span className="mono" style={{
                       fontSize: '0.75rem',
                       fontWeight: 700,
-                      color: 'var(--accent-cyan)',
-                      background: 'rgba(0, 240, 255, 0.1)',
+                      color: 'var(--accent-red)',
+                      background: 'rgba(230, 25, 55, 0.12)',
                       padding: '2px 6px',
                       borderRadius: '4px',
                     }}>

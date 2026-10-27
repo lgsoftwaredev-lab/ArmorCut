@@ -47,13 +47,13 @@ export const RollCard: React.FC<RollCardProps> = ({
   const isDepleted = roll.status === 'DEPLETED' || roll.currentMeters <= 0;
 
   // Gauge bar color
-  let gaugeColor = 'linear-gradient(90deg, #10b981 0%, #00f0ff 100%)';
+  let gaugeColor = 'linear-gradient(90deg, #ff1a3c 0%, #ff4d6d 100%)';
   if (isDepleted) {
-    gaugeColor = 'linear-gradient(90deg, #ef4444 0%, #b91c1c 100%)';
+    gaugeColor = 'linear-gradient(90deg, #ef4444 0%, #7f1d1d 100%)';
   } else if (isLowStock || percentRemaining < 25) {
     gaugeColor = 'linear-gradient(90deg, #f59e0b 0%, #ef4444 100%)';
   } else if (percentRemaining < 50) {
-    gaugeColor = 'linear-gradient(90deg, #00f0ff 0%, #f59e0b 100%)';
+    gaugeColor = 'linear-gradient(90deg, #ff1a3c 0%, #f59e0b 100%)';
   }
 
   const costPerMeter = roll.initialMeters > 0 ? (roll.costPerRoll / roll.initialMeters).toFixed(1) : '0';
@@ -79,11 +79,11 @@ export const RollCard: React.FC<RollCardProps> = ({
             <span className="mono" style={{
               fontSize: '0.9rem',
               fontWeight: 700,
-              color: 'var(--accent-cyan)',
-              background: 'rgba(0, 240, 255, 0.1)',
+              color: 'var(--accent-red)',
+              background: 'rgba(230, 25, 55, 0.12)',
               padding: '2px 8px',
               borderRadius: 'var(--radius-sm)',
-              border: '1px solid rgba(0, 240, 255, 0.2)',
+              border: '1px solid rgba(230, 25, 55, 0.3)',
             }}>
               {roll.code}
             </span>
@@ -158,7 +158,7 @@ export const RollCard: React.FC<RollCardProps> = ({
             <span className="mono" style={{
               fontSize: '1.1rem',
               fontWeight: 700,
-              color: isLowStock ? 'var(--color-warning)' : isDepleted ? 'var(--color-danger)' : 'var(--accent-cyan)',
+              color: isLowStock ? 'var(--color-warning)' : isDepleted ? 'var(--color-danger)' : 'var(--accent-red)',
             }}>
               {percentRemaining}%
             </span>

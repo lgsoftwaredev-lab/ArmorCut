@@ -53,13 +53,13 @@ export const Header: React.FC<HeaderProps> = ({
             width: '42px',
             height: '42px',
             borderRadius: '10px',
-            background: 'linear-gradient(135deg, #00f0ff 0%, #0077b6 100%)',
+            background: 'linear-gradient(135deg, #ff1a3c 0%, #990f23 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)',
+            boxShadow: '0 0 16px rgba(230, 25, 55, 0.45)',
           }}>
-            <Layers size={24} color="#050b14" strokeWidth={2.5} />
+            <Layers size={24} color="#ffffff" strokeWidth={2.5} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
                 fontSize: '1.25rem',
                 fontWeight: 800,
                 letterSpacing: '-0.03em',
-                background: 'linear-gradient(90deg, #ffffff 0%, #94a3b8 100%)',
+                background: 'linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
@@ -78,9 +78,9 @@ export const Header: React.FC<HeaderProps> = ({
                 fontWeight: 700,
                 padding: '2px 7px',
                 borderRadius: '4px',
-                background: 'rgba(0, 240, 255, 0.15)',
-                color: 'var(--accent-cyan)',
-                border: '1px solid rgba(0, 240, 255, 0.3)',
+                background: 'rgba(230, 25, 55, 0.15)',
+                color: 'var(--accent-red)',
+                border: '1px solid rgba(230, 25, 55, 0.35)',
                 letterSpacing: '0.05em',
               }}>
                 PPF PRO
@@ -176,7 +176,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onOpenNewJob}
             className="btn btn-secondary btn-sm"
-            style={{ borderColor: 'var(--accent-cyan-dark)', color: 'var(--accent-cyan)' }}
+            style={{ borderColor: 'rgba(230, 25, 55, 0.4)', color: 'var(--accent-red)' }}
           >
             <Scissors size={15} />
             <span>+ Registrar Corte</span>

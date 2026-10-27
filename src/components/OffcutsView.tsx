@@ -81,7 +81,7 @@ export const OffcutsView: React.FC<OffcutsViewProps> = ({
       }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Layers size={22} color="var(--accent-cyan)" />
+            <Layers size={22} color="var(--accent-red)" />
             <span>Banco de Retazos Sobrantes Aprovechables</span>
           </h2>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
@@ -96,7 +96,7 @@ export const OffcutsView: React.FC<OffcutsViewProps> = ({
               onClick={() => setFilterStatus('AVAILABLE')}
               style={{
                 background: filterStatus === 'AVAILABLE' ? 'var(--bg-card-hover)' : 'transparent',
-                color: filterStatus === 'AVAILABLE' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                color: filterStatus === 'AVAILABLE' ? 'var(--accent-red)' : 'var(--text-secondary)',
                 border: 'none',
                 padding: '5px 12px',
                 borderRadius: 'var(--radius-sm)',
@@ -141,11 +141,11 @@ export const OffcutsView: React.FC<OffcutsViewProps> = ({
 
           <div style={{
             fontSize: '0.78rem',
-            color: 'var(--accent-cyan)',
-            background: 'rgba(0, 240, 255, 0.08)',
+            color: 'var(--accent-red)',
+            background: 'rgba(230, 25, 55, 0.12)',
             padding: '5px 12px',
             borderRadius: 'var(--radius-sm)',
-            border: '1px solid rgba(0, 240, 255, 0.2)',
+            border: '1px solid rgba(230, 25, 55, 0.3)',
             fontWeight: 600,
           }}>
             📐 {totalM2Available} m² útiles
@@ -201,8 +201,8 @@ export const OffcutsView: React.FC<OffcutsViewProps> = ({
                     <span className="mono" style={{
                       fontSize: '0.75rem',
                       fontWeight: 700,
-                      color: 'var(--accent-cyan)',
-                      background: 'rgba(0, 240, 255, 0.1)',
+                      color: 'var(--accent-red)',
+                      background: 'rgba(230, 25, 55, 0.12)',
                       padding: '2px 6px',
                       borderRadius: '4px',
                     }}>
@@ -241,9 +241,9 @@ export const OffcutsView: React.FC<OffcutsViewProps> = ({
                   {offcut.suggestedUse && (
                     <div style={{
                       fontSize: '0.75rem',
-                      color: 'var(--accent-cyan)',
+                      color: 'var(--accent-red)',
                       marginTop: '6px',
-                      background: 'rgba(0, 240, 255, 0.05)',
+                      background: 'rgba(230, 25, 55, 0.08)',
                       padding: '4px 8px',
                       borderRadius: '4px',
                     }}>

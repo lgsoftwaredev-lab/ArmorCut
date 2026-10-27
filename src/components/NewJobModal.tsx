@@ -203,13 +203,13 @@ const JobModalContent: React.FC<{
                 width: '36px',
                 height: '36px',
                 borderRadius: 'var(--radius-md)',
-                background: 'rgba(0, 240, 255, 0.1)',
+                background: 'rgba(230, 25, 55, 0.12)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Scissors size={20} color="var(--accent-cyan)" />
+              <Scissors size={20} color="var(--accent-red)" />
             </div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
               Registrar Corte & Descuento de PPF
@@ -229,7 +229,7 @@ const JobModalContent: React.FC<{
             <label className="form-label">
               <span>Bobina de Origen *</span>
               {currentRoll && (
-                <span style={{ color: currentRoll.currentMeters < 3 ? 'var(--color-warning)' : 'var(--accent-cyan)' }}>
+                <span style={{ color: currentRoll.currentMeters < 3 ? 'var(--color-warning)' : 'var(--accent-red)' }}>
                   Disponible: <strong>{currentRoll.currentMeters.toFixed(2)} m</strong> (Ancho: {currentRoll.widthMeters}m)
                 </span>
               )}
@@ -336,9 +336,9 @@ const JobModalContent: React.FC<{
                       fontSize: '0.75rem',
                       padding: '4px 9px',
                       borderRadius: 'var(--radius-sm)',
-                      border: isSelected ? '1px solid var(--accent-cyan)' : '1px solid var(--border-subtle)',
-                      background: isSelected ? 'rgba(0, 240, 255, 0.15)' : 'var(--bg-card)',
-                      color: isSelected ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                      border: isSelected ? '1px solid var(--accent-red)' : '1px solid var(--border-subtle)',
+                      background: isSelected ? 'rgba(230, 25, 55, 0.15)' : 'var(--bg-card)',
+                      color: isSelected ? 'var(--accent-red)' : 'var(--text-secondary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -470,16 +470,16 @@ const JobModalContent: React.FC<{
 
           {/* Usable Offcut Section (Collapsible Toggle) */}
           <div style={{
-            background: hasOffcut ? 'rgba(0, 240, 255, 0.08)' : 'var(--bg-input)',
-            border: hasOffcut ? '1px solid rgba(0, 240, 255, 0.3)' : '1px solid var(--border-card)',
+            background: hasOffcut ? 'rgba(230, 25, 55, 0.08)' : 'var(--bg-input)',
+            border: hasOffcut ? '1px solid rgba(230, 25, 55, 0.35)' : '1px solid var(--border-card)',
             borderRadius: 'var(--radius-md)',
             padding: '14px',
             marginBottom: '14px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Layers size={18} color={hasOffcut ? 'var(--accent-cyan)' : 'var(--text-muted)'} />
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: hasOffcut ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
+                <Layers size={18} color={hasOffcut ? 'var(--accent-red)' : 'var(--text-muted)'} />
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: hasOffcut ? 'var(--accent-red)' : 'var(--text-primary)' }}>
                   ¿Generó un Retazo Sobrante Aprovechable?
                 </span>
               </div>
@@ -488,7 +488,7 @@ const JobModalContent: React.FC<{
                 id="offcutToggle"
                 checked={hasOffcut}
                 onChange={(e) => setHasOffcut(e.target.checked)}
-                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-cyan)', cursor: 'pointer' }}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-red)', cursor: 'pointer' }}
               />
             </div>
 

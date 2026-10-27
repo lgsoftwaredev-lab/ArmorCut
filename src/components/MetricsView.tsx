@@ -37,9 +37,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ stats }) => {
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
               Stock Total Activo
             </span>
-            <Layers size={18} color="var(--accent-cyan)" />
+            <Layers size={18} color="var(--accent-red)" />
           </div>
-          <div className="mono" style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>
+          <div className="mono" style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent-red)' }}>
             {stats.totalStockMeters} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>m</span>
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -129,7 +129,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ stats }) => {
           padding: '24px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-            <Users size={20} color="var(--accent-cyan)" />
+            <Users size={20} color="var(--accent-red)" />
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>
               Control de Merma por Instalador
             </h3>
@@ -163,14 +163,14 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ stats }) => {
                         width: '28px',
                         height: '28px',
                         borderRadius: '50%',
-                        background: idx === 0 ? 'rgba(0, 240, 255, 0.2)' : 'var(--bg-card)',
-                        border: idx === 0 ? '1px solid var(--accent-cyan)' : '1px solid var(--border-subtle)',
+                        background: idx === 0 ? 'rgba(230, 25, 55, 0.2)' : 'var(--bg-card)',
+                        border: idx === 0 ? '1px solid var(--accent-red)' : '1px solid var(--border-subtle)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: idx === 0 ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                        color: idx === 0 ? 'var(--accent-red)' : 'var(--text-secondary)',
                       }}>
                         #{idx + 1}
                       </div>
@@ -209,7 +209,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ stats }) => {
           padding: '24px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-            <PieChart size={20} color="var(--accent-cyan)" />
+            <PieChart size={20} color="var(--accent-red)" />
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>
               Causas Principales de Scrap
             </h3>

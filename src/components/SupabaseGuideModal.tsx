@@ -113,7 +113,7 @@ ON CONFLICT (id) DO NOTHING;`;
           justifyContent: 'space-between',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Database size={22} color="var(--accent-cyan)" />
+            <Database size={22} color="var(--accent-red)" />
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
               Conexión a Supabase ($0 de Mantenimiento)
             </h2>
@@ -160,8 +160,8 @@ ON CONFLICT (id) DO NOTHING;`;
                 height: '26px',
                 borderRadius: '50%',
                 background: 'var(--bg-input)',
-                border: '1px solid var(--accent-cyan)',
-                color: 'var(--accent-cyan)',
+                border: '1px solid var(--accent-red)',
+                color: 'var(--accent-red)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -174,7 +174,7 @@ ON CONFLICT (id) DO NOTHING;`;
               <div>
                 <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>Crear cuenta gratuita en Supabase</strong>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Ingresa en <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan)', textDecoration: 'underline' }}>supabase.com</a> y crea un nuevo proyecto (plan Free $0, sin tarjeta de crédito).
+                  Ingresa en <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-red)', textDecoration: 'underline' }}>supabase.com</a> y crea un nuevo proyecto (plan Free $0, sin tarjeta de crédito).
                 </p>
               </div>
             </div>
@@ -186,8 +186,8 @@ ON CONFLICT (id) DO NOTHING;`;
                 height: '26px',
                 borderRadius: '50%',
                 background: 'var(--bg-input)',
-                border: '1px solid var(--accent-cyan)',
-                color: 'var(--accent-cyan)',
+                border: '1px solid var(--accent-red)',
+                color: 'var(--accent-red)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -221,8 +221,8 @@ ON CONFLICT (id) DO NOTHING;`;
                 height: '26px',
                 borderRadius: '50%',
                 background: 'var(--bg-input)',
-                border: '1px solid var(--accent-cyan)',
-                color: 'var(--accent-cyan)',
+                border: '1px solid var(--accent-red)',
+                color: 'var(--accent-red)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
