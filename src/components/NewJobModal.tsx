@@ -120,6 +120,7 @@ const JobModalContent: React.FC<{
 
   return (
     <div
+      className="modal-backdrop"
       style={{
         position: 'fixed',
         inset: 0,
@@ -127,7 +128,7 @@ const JobModalContent: React.FC<{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(0, 0, 0, 0.82)',
+        background: 'rgba(0, 0, 0, 0.85)',
         backdropFilter: 'blur(8px)',
         padding: '12px',
       }}
@@ -136,6 +137,7 @@ const JobModalContent: React.FC<{
       }}
     >
       <div
+        className="modal-content"
         style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border-card)',
