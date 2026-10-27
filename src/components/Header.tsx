@@ -1,6 +1,7 @@
 'use client';
 
-import { Layers, Database, Download, AlertTriangle } from 'lucide-react';
+import React from 'react';
+import { Layers, Database, AlertTriangle } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 interface HeaderProps {
@@ -9,8 +10,6 @@ interface HeaderProps {
   activeRollsCount: number;
   lowStockCount: number;
   totalJobsCount: number;
-  onOpenSupabaseGuide: () => void;
-  onExportCSV: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,8 +18,6 @@ export const Header: React.FC<HeaderProps> = ({
   activeRollsCount,
   lowStockCount,
   totalJobsCount,
-  onOpenSupabaseGuide,
-  onExportCSV,
 }) => {
   const isCloudConnected = isSupabaseConfigured();
 
@@ -133,40 +130,25 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Action Buttons & Cloud Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Cloud Badge */}
-          <button
-            onClick={onOpenSupabaseGuide}
-            title={isCloudConnected ? "Conectado a Supabase PostgreSQL" : "Modo Local / Clic para conectar Supabase $0"}
+        {/* Cloud Status Pill */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div
             style={{
               background: isCloudConnected ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
               border: `1px solid ${isCloudConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
               color: isCloudConnected ? 'var(--color-success)' : 'var(--color-warning)',
               borderRadius: 'var(--radius-md)',
-              padding: '6px 10px',
+              padding: '6px 12px',
               fontSize: '0.75rem',
               fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              cursor: 'pointer',
-              transition: 'var(--transition-fast)',
             }}
           >
             <Database size={14} />
-            <span>{isCloudConnected ? 'Supabase Nube' : 'Modo Demo ($0 DB)'}</span>
-          </button>
-
-          {/* Export CSV */}
-          <button
-            onClick={onExportCSV}
-            className="btn btn-secondary btn-sm"
-            title="Descargar reporte en Excel / CSV"
-          >
-            <Download size={14} />
-            <span>CSV</span>
-          </button>
+            <span>{isCloudConnected ? 'Supabase Nube' : 'Modo Local'}</span>
+          </div>
         </div>
       </div>
     </header>

@@ -14,7 +14,6 @@ import { NewRollModal } from '@/components/NewRollModal';
 import { NewJobModal } from '@/components/NewJobModal';
 import { JobsHistoryView } from '@/components/JobsHistoryView';
 import { MetricsView } from '@/components/MetricsView';
-import { SupabaseGuideModal } from '@/components/SupabaseGuideModal';
 import { 
   Layers, 
   Scissors, 
@@ -44,8 +43,6 @@ export default function ArmorCutDashboard() {
 
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
   const [preselectedRoll, setPreselectedRoll] = useState<PPFRoll | null>(null);
-
-  const [isSupabaseGuideOpen, setIsSupabaseGuideOpen] = useState(false);
 
   // Load Data
   const loadData = async () => {
@@ -107,15 +104,6 @@ export default function ArmorCutDashboard() {
     await loadData();
   };
 
-  // Export CSV
-  const handleExportCSV = () => {
-    if (activeTab === 'JOBS') {
-      StockService.exportJobsToCSV(jobs);
-    } else {
-      StockService.exportRollsToCSV(rolls);
-    }
-  };
-
   // Stats calculation
   const stats = StockService.calculateStats(rolls, jobs, 3.0);
 
@@ -146,8 +134,6 @@ export default function ArmorCutDashboard() {
         activeRollsCount={stats.activeRolls}
         lowStockCount={stats.lowStockRolls.length}
         totalJobsCount={jobs.length}
-        onOpenSupabaseGuide={() => setIsSupabaseGuideOpen(true)}
-        onExportCSV={handleExportCSV}
       />
 
       {/* Main Container */}
@@ -414,11 +400,6 @@ export default function ArmorCutDashboard() {
         rolls={rolls}
         preselectedRoll={preselectedRoll}
         onSaveJob={handleSaveJob}
-      />
-
-      <SupabaseGuideModal
-        isOpen={isSupabaseGuideOpen}
-        onClose={() => setIsSupabaseGuideOpen(false)}
       />
     </div>
   );
