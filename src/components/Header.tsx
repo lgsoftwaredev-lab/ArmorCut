@@ -1,6 +1,6 @@
 'use client';
 
-import { Layers, Plus, Scissors, Database, Download, AlertTriangle } from 'lucide-react';
+import { Layers, Database, Download, AlertTriangle } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 interface HeaderProps {
@@ -9,8 +9,6 @@ interface HeaderProps {
   activeRollsCount: number;
   lowStockCount: number;
   totalJobsCount: number;
-  onOpenNewRoll: () => void;
-  onOpenNewJob: () => void;
   onOpenSupabaseGuide: () => void;
   onExportCSV: () => void;
 }
@@ -21,8 +19,6 @@ export const Header: React.FC<HeaderProps> = ({
   activeRollsCount,
   lowStockCount,
   totalJobsCount,
-  onOpenNewRoll,
-  onOpenNewJob,
   onOpenSupabaseGuide,
   onExportCSV,
 }) => {
@@ -170,25 +166,6 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Download size={14} />
             <span>CSV</span>
-          </button>
-
-          {/* New Job Button */}
-          <button
-            onClick={onOpenNewJob}
-            className="btn btn-secondary btn-sm"
-            style={{ borderColor: 'rgba(230, 25, 55, 0.4)', color: 'var(--accent-red)' }}
-          >
-            <Scissors size={15} />
-            <span>+ Registrar Corte</span>
-          </button>
-
-          {/* New Roll Button */}
-          <button
-            onClick={onOpenNewRoll}
-            className="btn btn-primary btn-sm"
-          >
-            <Plus size={15} />
-            <span>+ Nueva Bobina</span>
           </button>
         </div>
       </div>

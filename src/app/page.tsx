@@ -146,14 +146,6 @@ export default function ArmorCutDashboard() {
         activeRollsCount={stats.activeRolls}
         lowStockCount={stats.lowStockRolls.length}
         totalJobsCount={jobs.length}
-        onOpenNewRoll={() => {
-          setEditingRoll(null);
-          setIsNewRollModalOpen(true);
-        }}
-        onOpenNewJob={() => {
-          setPreselectedRoll(null);
-          setIsNewJobModalOpen(true);
-        }}
         onOpenSupabaseGuide={() => setIsSupabaseGuideOpen(true)}
         onExportCSV={handleExportCSV}
       />
