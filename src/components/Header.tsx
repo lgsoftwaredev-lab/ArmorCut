@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { Layers, Database, AlertTriangle } from 'lucide-react';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import React, { useState, useEffect } from 'react';
+import { Layers, Database, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 interface HeaderProps {
   shopName: string;
@@ -19,7 +19,39 @@ export const Header: React.FC<HeaderProps> = ({
   lowStockCount,
   totalJobsCount,
 }) => {
-  const isCloudConnected = isSupabaseConfigured();
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'local'>('checking');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function verifyConnection() {
+      if (!isSupabaseConfigured() || !supabase) {
+        if (isMounted) setConnectionStatus('local');
+        return;
+      }
+
+      try {
+        const { error } = await supabase.from('ppf_rolls').select('id').limit(1);
+        if (isMounted) {
+          if (!error) {
+            setConnectionStatus('connected');
+          } else {
+            console.warn('Supabase ping check failed:', error.message);
+            setConnectionStatus('local');
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase connection error:', err);
+        if (isMounted) setConnectionStatus('local');
+      }
+    }
+
+    verifyConnection();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <header style={{
@@ -130,25 +162,78 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Cloud Status Pill */}
+        {/* Cloud Status Indicator */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div
-            style={{
-              background: isCloudConnected ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-              border: `1px solid ${isCloudConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-              color: isCloudConnected ? 'var(--color-success)' : 'var(--color-warning)',
-              borderRadius: 'var(--radius-md)',
-              padding: '6px 12px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Database size={14} />
-            <span>{isCloudConnected ? 'Supabase Nube' : 'Modo Local'}</span>
-          </div>
+          {connectionStatus === 'connected' && (
+            <div
+              style={{
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                color: '#34d399',
+                borderRadius: 'var(--radius-md)',
+                padding: '6px 12px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
+                boxShadow: '0 0 14px rgba(16, 185, 129, 0.2)',
+              }}
+              title="Base de datos PostgreSQL en Supabase conectada y sincronizada"
+            >
+              <span style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: '#10b981',
+                boxShadow: '0 0 8px #10b981',
+                display: 'inline-block',
+              }} />
+              <CheckCircle2 size={14} color="#34d399" />
+              <span>Supabase Conectado</span>
+            </div>
+          )}
+
+          {connectionStatus === 'checking' && (
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-muted)',
+                borderRadius: 'var(--radius-md)',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Database size={13} />
+              <span>Comprobando conexión...</span>
+            </div>
+          )}
+
+          {connectionStatus === 'local' && (
+            <div
+              style={{
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                color: 'var(--color-warning)',
+                borderRadius: 'var(--radius-md)',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              title="Guardando en almacenamiento local del navegador"
+            >
+              <Database size={13} />
+              <span>Modo Local</span>
+            </div>
+          )}
         </div>
       </div>
     </header>
