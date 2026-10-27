@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { PPFOffcut, PPFRoll } from '@/types/ppf';
-import { Layers, Plus, CheckCircle, Trash2, MapPin, Sparkles, DollarSign } from 'lucide-react';
+import { Layers, Plus, CheckCircle, Trash2, MapPin } from 'lucide-react';
 
 interface OffcutsViewProps {
   offcuts: PPFOffcut[];
   rolls: PPFRoll[];
-  onAddOffcut: (offcutData: any) => Promise<void>;
+  onAddOffcut: (offcutData: Omit<PPFOffcut, 'id' | 'createdAt'>) => Promise<void>;
   onUpdateStatus: (id: string, status: 'AVAILABLE' | 'USED' | 'DISCARDED') => Promise<void>;
   onDeleteOffcut: (id: string) => Promise<void>;
 }
@@ -137,6 +137,18 @@ export const OffcutsView: React.FC<OffcutsViewProps> = ({
             >
               Todos ({offcuts.length})
             </button>
+          </div>
+
+          <div style={{
+            fontSize: '0.78rem',
+            color: 'var(--accent-cyan)',
+            background: 'rgba(0, 240, 255, 0.08)',
+            padding: '5px 12px',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid rgba(0, 240, 255, 0.2)',
+            fontWeight: 600,
+          }}>
+            📐 {totalM2Available} m² útiles
           </div>
 
           <button onClick={() => setIsModalOpen(true)} className="btn btn-primary btn-sm">
@@ -345,6 +357,17 @@ export const OffcutsView: React.FC<OffcutsViewProps> = ({
                   value={suggestedUse}
                   onChange={(e) => setSuggestedUse(e.target.value)}
                   placeholder="Espejos retrovisores, manijas, pantallas interiores"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Notas Adicionales</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Detalles sobre el retazo o estado"
                 />
               </div>
 

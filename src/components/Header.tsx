@@ -1,7 +1,6 @@
 'use client';
 
-import React from 'react';
-import { Layers, Plus, Scissors, Database, Download, AlertTriangle, ShieldCheck, Sparkles } from 'lucide-react';
+import { Layers, Plus, Scissors, Database, Download, AlertTriangle } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 interface HeaderProps {

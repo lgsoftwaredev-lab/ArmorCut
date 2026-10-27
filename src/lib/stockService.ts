@@ -1,5 +1,61 @@
-import { PPFRoll, PPFJobConsumption, PPFOffcut, PPFShopSettings, ScrapReason } from '@/types/ppf';
+import { PPFRoll, PPFJobConsumption, PPFOffcut, CreateRollInput, CreateJobInput, JobCreatedOffcutInput, PPFStats } from '@/types/ppf';
 import { supabase, isSupabaseConfigured } from './supabase';
+
+interface SupabaseRollRow {
+  id: string;
+  code: string;
+  brand: string;
+  model: string;
+  finish: PPFRoll['finish'];
+  width_meters: number | string;
+  initial_meters: number | string;
+  current_meters: number | string;
+  cost_per_roll: number | string;
+  currency?: string;
+  batch_number?: string;
+  location: string;
+  status: PPFRoll['status'];
+  created_at: string;
+  notes?: string;
+}
+
+interface SupabaseJobRow {
+  id: string;
+  roll_id: string;
+  roll_code: string;
+  brand: string;
+  model?: string;
+  finish: PPFRoll['finish'];
+  vehicle: string;
+  license_plate?: string;
+  client_name: string;
+  work_order_number?: string;
+  installer: string;
+  parts: string[] | string;
+  meters_used: number | string;
+  meters_scrap?: number | string;
+  scrap_reason?: PPFJobConsumption['scrapReason'];
+  scrap_notes?: string;
+  cost_calculated?: number | string;
+  job_date: string;
+  notes?: string;
+}
+
+interface SupabaseOffcutRow {
+  id: string;
+  parent_roll_id: string;
+  parent_roll_code: string;
+  brand: string;
+  finish: PPFRoll['finish'];
+  width_cm: number | string;
+  length_cm: number | string;
+  storage_location: string;
+  suggested_use: string;
+  status: 'AVAILABLE' | 'USED' | 'DISCARDED';
+  used_in_job_id?: string;
+  created_at: string;
+  notes?: string;
+}
 
 // Mock initial data: 100% Kryptonite PPF (156cm y 120cm x 15m)
 const INITIAL_ROLLS: PPFRoll[] = [
@@ -212,7 +268,7 @@ export class StockService {
           .order('created_at', { ascending: false });
 
         if (!error && data) {
-          return data.map((r: any) => ({
+          return (data as unknown as SupabaseRollRow[]).map((r) => ({
             id: r.id,
             code: r.code,
             brand: r.brand || 'Kryptonite',
@@ -248,7 +304,7 @@ export class StockService {
   }
 
   // Create Roll
-  static async addRoll(roll: Omit<PPFRoll, 'id' | 'createdAt'>): Promise<PPFRoll> {
+  static async addRoll(roll: CreateRollInput): Promise<PPFRoll> {
     const newRoll: PPFRoll = {
       ...roll,
       id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `roll-${Date.now()}`,
@@ -306,7 +362,7 @@ export class StockService {
   static async updateRoll(id: string, updates: Partial<PPFRoll>): Promise<void> {
     if (isSupabaseConfigured() && supabase) {
       try {
-        const payload: any = {};
+        const payload: Record<string, unknown> = {};
         if (updates.code) payload.code = updates.code;
         if (updates.brand) payload.brand = updates.brand;
         if (updates.model) payload.model = updates.model;
@@ -360,7 +416,7 @@ export class StockService {
           .order('job_date', { ascending: false });
 
         if (!error && data) {
-          return data.map((j: any) => ({
+          return (data as unknown as SupabaseJobRow[]).map((j) => ({
             id: j.id,
             rollId: j.roll_id,
             rollCode: j.roll_code,
@@ -401,14 +457,8 @@ export class StockService {
 
   // Record a Job
   static async recordJob(
-    jobData: Omit<PPFJobConsumption, 'id' | 'costCalculated' | 'jobDate'>,
-    createdOffcut?: {
-      widthCm: number;
-      lengthCm: number;
-      storageLocation: string;
-      suggestedUse: string;
-      notes?: string;
-    }
+    jobData: CreateJobInput,
+    createdOffcut?: JobCreatedOffcutInput
   ): Promise<{ job: PPFJobConsumption; updatedRoll: PPFRoll }> {
     const rolls = await this.getRolls();
     const roll = rolls.find((r) => r.id === jobData.rollId || r.code === jobData.rollCode);
@@ -533,7 +583,7 @@ export class StockService {
           .order('created_at', { ascending: false });
 
         if (!error && data) {
-          return data.map((o: any) => ({
+          return (data as unknown as SupabaseOffcutRow[]).map((o) => ({
             id: o.id,
             parentRollId: o.parent_roll_id,
             parentRollCode: o.parent_roll_code,
@@ -646,7 +696,7 @@ export class StockService {
   }
 
   // Stats calculation
-  static calculateStats(rolls: PPFRoll[], jobs: PPFJobConsumption[], offcuts: PPFOffcut[], lowStockThreshold = 3.0) {
+  static calculateStats(rolls: PPFRoll[], jobs: PPFJobConsumption[], offcuts: PPFOffcut[], lowStockThreshold = 3.0): PPFStats {
     const totalRolls = rolls.length;
     const activeRolls = rolls.filter((r) => r.status === 'ACTIVE').length;
     const sealedRolls = rolls.filter((r) => r.status === 'SEALED').length;

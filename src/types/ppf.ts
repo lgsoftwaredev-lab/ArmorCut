@@ -88,3 +88,41 @@ export interface PPFDatabaseData {
   version: string;
   lastUpdated: string;
 }
+
+export interface InstallerStat {
+  name: string;
+  jobsCount: number;
+  metersUsed: number;
+  metersScrap: number;
+  wasteRatePercent: number;
+  costWasted: number;
+}
+
+export interface PPFStats {
+  totalRolls: number;
+  activeRolls: number;
+  sealedRolls: number;
+  depletedRolls: number;
+  totalStockMeters: number;
+  lowStockRolls: PPFRoll[];
+  estimatedInventoryValue: number;
+  totalMetersUsed: number;
+  totalMetersScrap: number;
+  overallScrapRate: number;
+  totalScrapCostWasted: number;
+  installerStats: InstallerStat[];
+  scrapReasonsMap: { [reason: string]: { count: number; meters: number } };
+  availableOffcutsCount: number;
+  usedOffcutsCount: number;
+}
+
+export type CreateRollInput = Omit<PPFRoll, 'id' | 'createdAt'>;
+export type CreateJobInput = Omit<PPFJobConsumption, 'id' | 'costCalculated' | 'jobDate'>;
+export type CreateOffcutInput = Omit<PPFOffcut, 'id' | 'createdAt'>;
+export interface JobCreatedOffcutInput {
+  widthCm: number;
+  lengthCm: number;
+  storageLocation: string;
+  suggestedUse: string;
+  notes?: string;
+}

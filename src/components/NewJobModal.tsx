@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { PPFRoll, ScrapReason } from '@/types/ppf';
-import { Scissors, AlertTriangle, X, Check, DollarSign, Layers } from 'lucide-react';
+import React, { useState } from 'react';
+import { PPFRoll, ScrapReason, CreateJobInput, JobCreatedOffcutInput } from '@/types/ppf';
+import { Scissors, AlertTriangle, X, Check, Layers, Plus } from 'lucide-react';
 
 interface NewJobModalProps {
   isOpen: boolean;
@@ -10,14 +10,8 @@ interface NewJobModalProps {
   rolls: PPFRoll[];
   preselectedRoll?: PPFRoll | null;
   onSaveJob: (
-    jobData: any,
-    createdOffcut?: {
-      widthCm: number;
-      lengthCm: number;
-      storageLocation: string;
-      suggestedUse: string;
-      notes?: string;
-    }
+    jobData: CreateJobInput,
+    createdOffcut?: JobCreatedOffcutInput
   ) => Promise<void>;
 }
 
@@ -45,16 +39,17 @@ const SCRAP_REASONS: { value: ScrapReason; label: string }[] = [
   { value: 'OTHER', label: 'Otro motivo' },
 ];
 
-export const NewJobModal: React.FC<NewJobModalProps> = ({
-  isOpen,
-  onClose,
-  rolls,
-  preselectedRoll,
-  onSaveJob,
-}) => {
+const JobModalContent: React.FC<{
+  rolls: PPFRoll[];
+  preselectedRoll?: PPFRoll | null;
+  onClose: () => void;
+  onSaveJob: (jobData: CreateJobInput, createdOffcut?: JobCreatedOffcutInput) => Promise<void>;
+}> = ({ rolls, preselectedRoll, onClose, onSaveJob }) => {
   const activeRolls = rolls.filter((r) => r.status === 'ACTIVE' || r.id === preselectedRoll?.id);
 
-  const [selectedRollId, setSelectedRollId] = useState('');
+  const [selectedRollId, setSelectedRollId] = useState(
+    () => preselectedRoll?.id || (activeRolls.length > 0 ? activeRolls[0].id : '')
+  );
   const [vehicle, setVehicle] = useState('');
   const [licensePlate, setLicensePlate] = useState('');
   const [clientName, setClientName] = useState('');
@@ -76,25 +71,14 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
   const [offcutLengthCm, setOffcutLengthCm] = useState(110);
   const [offcutLocation, setOffcutLocation] = useState('Cajón 1 - Retazos Capot');
   const [offcutSuggestedUse, setOffcutSuggestedUse] = useState('Espejos retrovisores, tazas de puerta o B-Pillars');
+  const [offcutNotes, setOffcutNotes] = useState('');
 
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (preselectedRoll) {
-      setSelectedRollId(preselectedRoll.id);
-    } else if (activeRolls.length > 0 && !selectedRollId) {
-      setSelectedRollId(activeRolls[0].id);
-    }
-  }, [preselectedRoll, activeRolls, selectedRollId]);
-
-  if (!isOpen) return null;
-
   const currentRoll = rolls.find((r) => r.id === selectedRollId) || activeRolls[0];
   const totalMetersDeducted = Number(metersUsed) + (hasScrap ? Number(metersScrap) : 0);
-  const remainingAfterJob = currentRoll ? Math.max(0, currentRoll.currentMeters - totalMetersDeducted) : 0;
   const costPerMeter = currentRoll && currentRoll.initialMeters > 0 ? currentRoll.costPerRoll / currentRoll.initialMeters : 90;
-  const totalCostEstimate = (costPerMeter * totalMetersDeducted).toFixed(2);
   const scrapCostEstimate = (costPerMeter * (hasScrap ? Number(metersScrap) : 0)).toFixed(2);
 
   const togglePart = (part: string) => {
@@ -135,7 +119,7 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
 
     try {
       setIsSubmitting(true);
-      const jobData = {
+      const jobData: CreateJobInput = {
         rollId: currentRoll.id,
         rollCode: currentRoll.code,
         brand: currentRoll.brand,
@@ -154,39 +138,79 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
         notes: notes.trim() || undefined,
       };
 
-      const offcutData = hasOffcut && offcutWidthCm > 0 && offcutLengthCm > 0
+      const offcutData: JobCreatedOffcutInput | undefined = hasOffcut && offcutWidthCm > 0 && offcutLengthCm > 0
         ? {
             widthCm: Number(offcutWidthCm),
             lengthCm: Number(offcutLengthCm),
             storageLocation: offcutLocation.trim() || 'Cajón de Retazos',
             suggestedUse: offcutSuggestedUse.trim() || 'Piezas chicas',
-            notes: `Retazo de corte en ${vehicle.trim()}`,
+            notes: offcutNotes.trim() || undefined,
           }
         : undefined;
 
       await onSaveJob(jobData, offcutData);
       onClose();
     } catch (err) {
-      console.error(err);
-      alert('Error registrando el trabajo');
+      console.error('Error saving job:', err);
+      alert('Ocurrió un error al registrar el trabajo.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" style={{ maxWidth: '680px' }} onClick={(e) => e.stopPropagation()}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(4px)',
+        padding: '16px',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-card)',
+          borderRadius: 'var(--radius-lg)',
+          width: '100%',
+          maxWidth: '680px',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
+        }}
+      >
         {/* Header */}
-        <div style={{
-          padding: '18px 24px',
-          borderBottom: '1px solid var(--border-card)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '20px 24px',
+            borderBottom: '1px solid var(--border-card)',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Scissors size={20} color="var(--accent-cyan)" />
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(0, 240, 255, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Scissors size={20} color="var(--accent-cyan)" />
+            </div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
               Registrar Corte & Descuento de PPF
             </h2>
@@ -265,6 +289,17 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
             </div>
 
             <div className="form-group">
+              <label className="form-label">Orden de Trabajo (OT)</label>
+              <input
+                type="text"
+                className="form-input mono"
+                value={workOrderNumber}
+                onChange={(e) => setWorkOrderNumber(e.target.value)}
+                placeholder="Ej: OT-2026-105"
+              />
+            </div>
+
+            <div className="form-group">
               <label className="form-label">Técnico Instalador *</label>
               <input
                 type="text"
@@ -315,6 +350,33 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
                   </button>
                 );
               })}
+            </div>
+
+            {/* Custom part addition */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Agregar otra pieza (ej: Alerón Trasero, Zócalo Interior...)"
+                value={customPart}
+                onChange={(e) => setCustomPart(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomPart();
+                  }
+                }}
+                style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+              />
+              <button
+                type="button"
+                onClick={addCustomPart}
+                className="btn btn-secondary btn-sm"
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                <Plus size={14} />
+                <span>Agregar</span>
+              </button>
             </div>
           </div>
 
@@ -457,63 +519,63 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Ubicación del Retazo</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={offcutLocation}
-                      onChange={(e) => setOffcutLocation(e.target.value)}
-                      placeholder="Cajón 1, Tubo A, Estante..."
-                    />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Uso Sugerido</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={offcutSuggestedUse}
-                      onChange={(e) => setOffcutSuggestedUse(e.target.value)}
-                      placeholder="Espejos, manijas, ópticas..."
-                    />
-                  </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Ubicación para Guardarlo en Taller</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={offcutLocation}
+                    onChange={(e) => setOffcutLocation(e.target.value)}
+                    placeholder="Ej: Cajón 1 - Retazos Capot"
+                  />
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Uso Sugerido para este Retazo</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={offcutSuggestedUse}
+                    onChange={(e) => setOffcutSuggestedUse(e.target.value)}
+                    placeholder="Ej: Espejos retrovisores, B-Pillars, Tazas de Puerta"
+                  />
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Notas del Retazo (Opcional)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={offcutNotes}
+                    onChange={(e) => setOffcutNotes(e.target.value)}
+                    placeholder="Observaciones sobre el sobrante"
+                  />
                 </div>
               </div>
             )}
           </div>
 
-          {/* Job Summary Banner */}
-          <div style={{
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-card)',
-            borderRadius: 'var(--radius-md)',
-            padding: '12px 16px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '0.8rem',
-            marginBottom: '16px',
-          }}>
-            <div>
-              <span style={{ color: 'var(--text-muted)' }}>Descuento Total en Bobina:</span>{' '}
-              <strong style={{ color: 'var(--text-primary)' }}>{totalMetersDeducted.toFixed(2)} m</strong>
-              <span style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                Quedarán: <strong>{remainingAfterJob.toFixed(2)} m</strong> en {currentRoll?.code}
-              </span>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Costo Material:</span>{' '}
-              <strong style={{ color: 'var(--accent-cyan)', fontSize: '0.95rem' }}>${totalCostEstimate} USD</strong>
-            </div>
+          {/* General Job Notes */}
+          <div className="form-group">
+            <label className="form-label">Notas del Trabajo / Instalación (Opcional)</label>
+            <input
+              type="text"
+              className="form-input"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Detalles sobre el acabado, cliente o proveedor de corte"
+            />
           </div>
 
-          {/* Submit */}
+          {/* Action buttons */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
             gap: '12px',
+            marginTop: '20px',
+            paddingTop: '16px',
+            borderTop: '1px solid var(--border-card)',
           }}>
             <button
               type="button"
@@ -528,11 +590,30 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
               className="btn btn-primary"
             >
               <Scissors size={16} />
-              <span>{isSubmitting ? 'Registrando...' : 'Confirmar & Descontar Metros'}</span>
+              <span>{isSubmitting ? 'Guardando...' : 'Confirmar y Descontar Stock'}</span>
             </button>
           </div>
         </form>
       </div>
     </div>
+  );
+};
+
+export const NewJobModal: React.FC<NewJobModalProps> = ({
+  isOpen,
+  onClose,
+  rolls,
+  preselectedRoll,
+  onSaveJob,
+}) => {
+  if (!isOpen) return null;
+  return (
+    <JobModalContent
+      key={preselectedRoll?.id || 'new-job-modal'}
+      rolls={rolls}
+      preselectedRoll={preselectedRoll}
+      onClose={onClose}
+      onSaveJob={onSaveJob}
+    />
   );
 };

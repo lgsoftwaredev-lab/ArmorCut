@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
-import { TrendingUp, AlertTriangle, Users, DollarSign, Award, PieChart, Layers } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Users, DollarSign, PieChart, Layers } from 'lucide-react';
+import { PPFStats, InstallerStat } from '@/types/ppf';
 
 interface MetricsViewProps {
-  stats: any;
+  stats: PPFStats;
 }
 
 const REASON_LABELS: { [key: string]: string } = {
@@ -142,7 +142,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ stats }) => {
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Aún no hay trabajos registrados.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {stats.installerStats.map((item: any, idx: number) => {
+              {stats.installerStats.map((item: InstallerStat, idx: number) => {
                 const isTopPro = item.wasteRatePercent < 5;
                 const isHighWaste = item.wasteRatePercent > 10;
                 return (
@@ -222,7 +222,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ stats }) => {
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No se han registrado roturas de film.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {Object.entries(stats.scrapReasonsMap).map(([reason, data]: [string, any]) => {
+              {Object.entries(stats.scrapReasonsMap).map(([reason, data]: [string, { count: number; meters: number }]) => {
                 const label = REASON_LABELS[reason] || reason;
                 const percentOfTotalScrap = stats.totalMetersScrap > 0
                   ? Math.round((data.meters / stats.totalMetersScrap) * 100)

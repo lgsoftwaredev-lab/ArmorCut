@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { PPFRoll, PPFFinish, PPFRollStatus } from '@/types/ppf';
+import React, { useState } from 'react';
+import { PPFRoll, PPFFinish, PPFRollStatus, CreateRollInput } from '@/types/ppf';
 import { X, Save, Layers, Check } from 'lucide-react';
 
 interface NewRollModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (rollData: any) => Promise<void>;
+  onSave: (rollData: CreateRollInput) => Promise<void>;
   editingRoll?: PPFRoll | null;
 }
 
@@ -21,57 +21,24 @@ const FINISHES: { value: PPFFinish; label: string }[] = [
   { value: 'OTHER', label: 'Otro / Especial' },
 ];
 
-export const NewRollModal: React.FC<NewRollModalProps> = ({
-  isOpen,
-  onClose,
-  onSave,
-  editingRoll,
-}) => {
-  const [code, setCode] = useState('');
-  const [brand, setBrand] = useState('Kryptonite');
-  const [model, setModel] = useState('Ultra Gloss');
-  const [finish, setFinish] = useState<PPFFinish>('GLOSS');
-  const [widthMeters, setWidthMeters] = useState(1.56);
-  const [initialMeters, setInitialMeters] = useState(15.0);
-  const [currentMeters, setCurrentMeters] = useState(15.0);
-  const [costPerRoll, setCostPerRoll] = useState(1300);
-  const [location, setLocation] = useState('Rack A');
-  const [batchNumber, setBatchNumber] = useState('');
-  const [status, setStatus] = useState<PPFRollStatus>('ACTIVE');
-  const [notes, setNotes] = useState('');
+const RollModalContent: React.FC<{
+  editingRoll?: PPFRoll | null;
+  onClose: () => void;
+  onSave: (rollData: CreateRollInput) => Promise<void>;
+}> = ({ editingRoll, onClose, onSave }) => {
+  const [code, setCode] = useState(() => editingRoll?.code || `KRYP-${Math.floor(10 + Math.random() * 90)}`);
+  const [brand, setBrand] = useState(() => editingRoll?.brand || 'Kryptonite');
+  const [model, setModel] = useState(() => editingRoll?.model || 'Ultra Gloss');
+  const [finish, setFinish] = useState<PPFFinish>(() => editingRoll?.finish || 'GLOSS');
+  const [widthMeters, setWidthMeters] = useState(() => editingRoll?.widthMeters ?? 1.56);
+  const [initialMeters, setInitialMeters] = useState(() => editingRoll?.initialMeters ?? 15.0);
+  const [currentMeters, setCurrentMeters] = useState(() => editingRoll?.currentMeters ?? 15.0);
+  const [costPerRoll, setCostPerRoll] = useState(() => editingRoll?.costPerRoll ?? 1300);
+  const [location, setLocation] = useState(() => editingRoll?.location || 'Rack Principal');
+  const [batchNumber, setBatchNumber] = useState(() => editingRoll?.batchNumber || '');
+  const [status, setStatus] = useState<PPFRollStatus>(() => editingRoll?.status || 'ACTIVE');
+  const [notes, setNotes] = useState(() => editingRoll?.notes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (editingRoll) {
-      setCode(editingRoll.code);
-      setBrand(editingRoll.brand || 'Kryptonite');
-      setModel(editingRoll.model);
-      setFinish(editingRoll.finish);
-      setWidthMeters(editingRoll.widthMeters);
-      setInitialMeters(editingRoll.initialMeters);
-      setCurrentMeters(editingRoll.currentMeters);
-      setCostPerRoll(editingRoll.costPerRoll);
-      setLocation(editingRoll.location);
-      setBatchNumber(editingRoll.batchNumber || '');
-      setStatus(editingRoll.status);
-      setNotes(editingRoll.notes || '');
-    } else {
-      setCode(`KRYP-${Math.floor(10 + Math.random() * 90)}`);
-      setBrand('Kryptonite');
-      setModel('Ultra Gloss');
-      setFinish('GLOSS');
-      setWidthMeters(1.56);
-      setInitialMeters(15.0);
-      setCurrentMeters(15.0);
-      setCostPerRoll(1300);
-      setLocation('Rack Principal');
-      setBatchNumber('');
-      setStatus('ACTIVE');
-      setNotes('');
-    }
-  }, [editingRoll, isOpen]);
-
-  if (!isOpen) return null;
 
   // Preset selector for Kryptonite
   const selectPreset = (type: 'BODY' | 'WINDSHIELD') => {
@@ -87,14 +54,13 @@ export const NewRollModal: React.FC<NewRollModalProps> = ({
       setCurrentMeters(15.0);
       setFinish('WINDSHIELD');
       setModel('Windshield Armor');
-      setLocation('Rack Vidrios');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim() || !brand.trim()) {
-      alert('Por favor completa el código y la marca de la bobina.');
+      alert('Por favor completa el código y marca.');
       return;
     }
 
@@ -110,40 +76,85 @@ export const NewRollModal: React.FC<NewRollModalProps> = ({
         currentMeters: Number(currentMeters),
         costPerRoll: Number(costPerRoll),
         currency: 'USD',
-        batchNumber: batchNumber.trim() || undefined,
         location: location.trim() || 'Taller',
+        batchNumber: batchNumber.trim() || undefined,
         status,
         notes: notes.trim() || undefined,
       });
       onClose();
     } catch (err) {
-      console.error(err);
-      alert('Error guardando la bobina');
+      console.error('Error saving roll:', err);
+      alert('Error al guardar la bobina.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(4px)',
+        padding: '16px',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-card)',
+          borderRadius: 'var(--radius-lg)',
+          width: '100%',
+          maxWidth: '620px',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
+        }}
+      >
         {/* Modal Header */}
-        <div style={{
-          padding: '18px 24px',
-          borderBottom: '1px solid var(--border-card)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '20px 24px',
+            borderBottom: '1px solid var(--border-card)',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Layers size={20} color="var(--accent-cyan)" />
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(0, 240, 255, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Layers size={20} color="var(--accent-cyan)" />
+            </div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
               {editingRoll ? 'Editar Bobina de PPF' : 'Dar de Alta Bobina Kryptonite'}
             </h2>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+            }}
           >
             <X size={20} />
           </button>
@@ -230,7 +241,7 @@ export const NewRollModal: React.FC<NewRollModalProps> = ({
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Modelo / Serie</label>
+              <label className="form-label">Modelo / Gama</label>
               <input
                 type="text"
                 className="form-input"
@@ -241,7 +252,7 @@ export const NewRollModal: React.FC<NewRollModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Acabado / Tipo de Film</label>
+              <label className="form-label">Acabado / Terminación *</label>
               <select
                 className="form-select"
                 value={finish}
@@ -289,7 +300,7 @@ export const NewRollModal: React.FC<NewRollModalProps> = ({
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Metros Actuales Restantes</label>
+              <label className="form-label">Metros Restantes Disponibles *</label>
               <input
                 type="number"
                 step="0.05"
@@ -365,15 +376,17 @@ export const NewRollModal: React.FC<NewRollModalProps> = ({
           </div>
 
           {/* Action buttons */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: '12px',
-            marginTop: '20px',
-            paddingTop: '16px',
-            borderTop: '1px solid var(--border-card)',
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '12px',
+              marginTop: '20px',
+              paddingTop: '16px',
+              borderTop: '1px solid var(--border-card)',
+            }}
+          >
             <button
               type="button"
               onClick={onClose}
@@ -393,5 +406,22 @@ export const NewRollModal: React.FC<NewRollModalProps> = ({
         </form>
       </div>
     </div>
+  );
+};
+
+export const NewRollModal: React.FC<NewRollModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  editingRoll,
+}) => {
+  if (!isOpen) return null;
+  return (
+    <RollModalContent
+      key={editingRoll?.id || 'new-roll'}
+      editingRoll={editingRoll}
+      onClose={onClose}
+      onSave={onSave}
+    />
   );
 };

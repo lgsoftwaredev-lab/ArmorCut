@@ -1,7 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PPFRoll, PPFJobConsumption, PPFOffcut, PPFFinish, PPFRollStatus } from '@/types/ppf';
+import { 
+  PPFRoll, 
+  PPFJobConsumption, 
+  PPFOffcut, 
+  CreateRollInput, 
+  CreateJobInput, 
+  JobCreatedOffcutInput, 
+  CreateOffcutInput 
+} from '@/types/ppf';
 import { StockService } from '@/lib/stockService';
 import { Header } from '@/components/Header';
 import { RollCard } from '@/components/RollCard';
@@ -15,11 +23,8 @@ import {
   Layers, 
   Scissors, 
   TrendingUp, 
-  Settings, 
   Search, 
-  Filter, 
   Plus, 
-  Download, 
   RotateCcw,
   AlertCircle
 } from 'lucide-react';
@@ -67,11 +72,32 @@ export default function ArmorCutDashboard() {
   };
 
   useEffect(() => {
-    loadData();
+    let ignore = false;
+    StockService.getRolls()
+      .then(async (fetchedRolls) => {
+        const [fetchedJobs, fetchedOffcuts] = await Promise.all([
+          StockService.getJobs(),
+          StockService.getOffcuts(),
+        ]);
+        if (!ignore) {
+          setRolls(fetchedRolls);
+          setJobs(fetchedJobs);
+          setOffcuts(fetchedOffcuts);
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Error loading inventory data:', err);
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   // Handlers for Rolls
-  const handleSaveRoll = async (rollData: any) => {
+  const handleSaveRoll = async (rollData: CreateRollInput) => {
     if (editingRoll) {
       await StockService.updateRoll(editingRoll.id, rollData);
     } else {
@@ -87,13 +113,13 @@ export default function ArmorCutDashboard() {
   };
 
   // Handlers for Jobs
-  const handleSaveJob = async (jobData: any, createdOffcut?: any) => {
+  const handleSaveJob = async (jobData: CreateJobInput, createdOffcut?: JobCreatedOffcutInput) => {
     await StockService.recordJob(jobData, createdOffcut);
     await loadData();
   };
 
   // Handlers for Offcuts
-  const handleAddOffcut = async (offcutData: any) => {
+  const handleAddOffcut = async (offcutData: CreateOffcutInput) => {
     await StockService.addOffcut(offcutData);
     await loadData();
   };
@@ -262,11 +288,12 @@ export default function ArmorCutDashboard() {
           {/* Quick Refresh */}
           <button
             onClick={loadData}
+            disabled={isLoading}
             className="btn btn-secondary btn-sm"
             title="Refrescar datos desde la base de datos"
           >
-            <RotateCcw size={14} />
-            <span>Actualizar</span>
+            <RotateCcw size={14} style={{ animation: isLoading ? 'spin 1s linear infinite' : 'none' }} />
+            <span>{isLoading ? 'Actualizando...' : 'Actualizar'}</span>
           </button>
         </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Database, Copy, Check, ExternalLink, X, ShieldCheck, Key } from 'lucide-react';
+import { Database, Copy, Check, X, ShieldCheck } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 interface SupabaseGuideModalProps {

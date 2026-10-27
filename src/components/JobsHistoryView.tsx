@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { PPFJobConsumption } from '@/types/ppf';
-import { Scissors, AlertTriangle, Search, Calendar, User, Car, DollarSign } from 'lucide-react';
+import { Scissors, AlertTriangle, Search, Car } from 'lucide-react';
 
 interface JobsHistoryViewProps {
   jobs: PPFJobConsumption[];
@@ -162,7 +162,7 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
                   </div>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                    {(job.parts || []).map((part, idx) => (
+                    {(job.parts || []).map((part: string, idx: number) => (
                       <span
                         key={idx}
                         style={{
