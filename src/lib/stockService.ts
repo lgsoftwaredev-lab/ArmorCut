@@ -1,4 +1,4 @@
-import { PPFRoll, PPFJobConsumption, PPFOffcut, CreateRollInput, CreateJobInput, JobCreatedOffcutInput, PPFStats } from '@/types/ppf';
+import { PPFRoll, PPFJobConsumption, CreateRollInput, CreateJobInput, PPFStats } from '@/types/ppf';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 interface SupabaseRollRow {
@@ -33,27 +33,8 @@ interface SupabaseJobRow {
   installer: string;
   parts: string[] | string;
   meters_used: number | string;
-  meters_scrap?: number | string;
-  scrap_reason?: PPFJobConsumption['scrapReason'];
-  scrap_notes?: string;
   cost_calculated?: number | string;
   job_date: string;
-  notes?: string;
-}
-
-interface SupabaseOffcutRow {
-  id: string;
-  parent_roll_id: string;
-  parent_roll_code: string;
-  brand: string;
-  finish: PPFRoll['finish'];
-  width_cm: number | string;
-  length_cm: number | string;
-  storage_location: string;
-  suggested_use: string;
-  status: 'AVAILABLE' | 'USED' | 'DISCARDED';
-  used_in_job_id?: string;
-  created_at: string;
   notes?: string;
 }
 
@@ -161,7 +142,6 @@ const INITIAL_JOBS: PPFJobConsumption[] = [
     installer: 'Lucas',
     parts: ['Capot Completo', 'Paragolpes Frontal', 'Espejos'],
     metersUsed: 4.2,
-    metersScrap: 0.0,
     costCalculated: 364.0,
     jobDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
     notes: 'Kit precortado por centro de corte instalado sin problemas',
@@ -180,12 +160,9 @@ const INITIAL_JOBS: PPFJobConsumption[] = [
     installer: 'Lucas',
     parts: ['Full Frontal', 'Ópticas', 'Zócalos'],
     metersUsed: 4.5,
-    metersScrap: 0.6,
-    scrapReason: 'CONTAMINATION',
-    scrapNotes: 'Polvo en la esquina inferior del capot obligó a pedir re-corte de la pieza',
-    costCalculated: 442.0,
+    costCalculated: 390.0,
     jobDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
-    notes: 'Re-corte solicitado a centro externo',
+    notes: 'Instalación prolija y limpia',
   },
   {
     id: 'job-3',
@@ -201,61 +178,14 @@ const INITIAL_JOBS: PPFJobConsumption[] = [
     installer: 'Marcos',
     parts: ['Parabrisas Completo'],
     metersUsed: 1.5,
-    metersScrap: 0.0,
     costCalculated: 110.0,
     jobDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
     notes: 'Colocación de film parabrisas 1.20m',
   },
 ];
 
-const INITIAL_OFFCUTS: PPFOffcut[] = [
-  {
-    id: 'offcut-1',
-    parentRollId: 'roll-1',
-    parentRollCode: 'KRYP-GL-01',
-    brand: 'Kryptonite',
-    finish: 'GLOSS',
-    widthCm: 50,
-    lengthCm: 120,
-    storageLocation: 'Cajón 1 - Retazos Capot',
-    suggestedUse: 'Espejos retrovisores o paragolpe inferior',
-    status: 'AVAILABLE',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    notes: 'Sobrante limpio devuelto del ploteo de Porsche 911',
-  },
-  {
-    id: 'offcut-2',
-    parentRollId: 'roll-2',
-    parentRollCode: 'KRYP-MT-02',
-    brand: 'Kryptonite',
-    finish: 'MATTE',
-    widthCm: 40,
-    lengthCm: 95,
-    storageLocation: 'Cajón Matte',
-    suggestedUse: 'Espejos satinados o detalles de alerón',
-    status: 'AVAILABLE',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-    notes: 'Material intacto para piezas chicas',
-  },
-  {
-    id: 'offcut-3',
-    parentRollId: 'roll-3',
-    parentRollCode: 'KRYP-WP-03',
-    brand: 'Kryptonite',
-    finish: 'WINDSHIELD',
-    widthCm: 30,
-    lengthCm: 70,
-    storageLocation: 'Tubo Parabrisas',
-    suggestedUse: 'Pruebas térmicas o visores',
-    status: 'AVAILABLE',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
-    notes: 'Recorte de parabrisas',
-  },
-];
-
 const LOCAL_STORAGE_KEY_ROLLS = 'armorcut_ppf_rolls_kryptonite_v1';
 const LOCAL_STORAGE_KEY_JOBS = 'armorcut_ppf_jobs_kryptonite_v1';
-const LOCAL_STORAGE_KEY_OFFCUTS = 'armorcut_ppf_offcuts_kryptonite_v1';
 
 export class StockService {
   // Load Rolls
@@ -430,9 +360,6 @@ export class StockService {
             installer: j.installer,
             parts: Array.isArray(j.parts) ? j.parts : JSON.parse(j.parts || '[]'),
             metersUsed: Number(j.meters_used),
-            metersScrap: Number(j.meters_scrap || 0),
-            scrapReason: j.scrap_reason,
-            scrapNotes: j.scrap_notes,
             costCalculated: Number(j.cost_calculated || 0),
             jobDate: j.job_date,
             notes: j.notes,
@@ -457,8 +384,7 @@ export class StockService {
 
   // Record a Job
   static async recordJob(
-    jobData: CreateJobInput,
-    createdOffcut?: JobCreatedOffcutInput
+    jobData: CreateJobInput
   ): Promise<{ job: PPFJobConsumption; updatedRoll: PPFRoll }> {
     const rolls = await this.getRolls();
     const roll = rolls.find((r) => r.id === jobData.rollId || r.code === jobData.rollCode);
@@ -467,7 +393,7 @@ export class StockService {
       throw new Error(`Bobina no encontrada: ${jobData.rollCode || jobData.rollId}`);
     }
 
-    const totalMetersDeducted = Number(jobData.metersUsed) + Number(jobData.metersScrap || 0);
+    const totalMetersDeducted = Number(jobData.metersUsed);
     const newCurrentMeters = Math.max(0, Number((roll.currentMeters - totalMetersDeducted).toFixed(2)));
     const newStatus = newCurrentMeters <= 0.05 ? 'DEPLETED' : roll.status;
 
@@ -480,7 +406,6 @@ export class StockService {
       jobDate: new Date().toISOString(),
       costCalculated: totalCost,
       metersUsed: Number(jobData.metersUsed),
-      metersScrap: Number(jobData.metersScrap || 0),
     };
 
     const updatedRoll: PPFRoll = {
@@ -505,9 +430,6 @@ export class StockService {
             installer: newJob.installer,
             parts: newJob.parts,
             meters_used: newJob.metersUsed,
-            meters_scrap: newJob.metersScrap,
-            scrap_reason: newJob.scrapReason,
-            scrap_notes: newJob.scrapNotes,
             cost_calculated: newJob.costCalculated,
             notes: newJob.notes,
           })
@@ -525,22 +447,6 @@ export class StockService {
             status: newStatus,
           })
           .eq('id', roll.id);
-
-        if (createdOffcut && createdOffcut.widthCm > 0 && createdOffcut.lengthCm > 0) {
-          await supabase.from('ppf_offcuts').insert({
-            parent_roll_id: roll.id,
-            parent_roll_code: roll.code,
-            brand: roll.brand,
-            finish: roll.finish,
-            width_cm: createdOffcut.widthCm,
-            length_cm: createdOffcut.lengthCm,
-            storage_location: createdOffcut.storageLocation || 'Cajón de Retazos',
-            suggested_use: createdOffcut.suggestedUse || 'Piezas chicas / Espejos',
-            status: 'AVAILABLE',
-            used_in_job_id: newJob.id,
-            notes: createdOffcut.notes || `Retazo de trabajo en ${newJob.vehicle}`,
-          });
-        }
       } catch (err) {
         console.error('Supabase recordJob error:', err);
       }
@@ -553,150 +459,13 @@ export class StockService {
 
       const storedJobs = await this.getJobs();
       localStorage.setItem(LOCAL_STORAGE_KEY_JOBS, JSON.stringify([newJob, ...storedJobs]));
-
-      if (createdOffcut && createdOffcut.widthCm > 0 && createdOffcut.lengthCm > 0) {
-        await this.addOffcut({
-          parentRollId: roll.id,
-          parentRollCode: roll.code,
-          brand: roll.brand,
-          finish: roll.finish,
-          widthCm: createdOffcut.widthCm,
-          lengthCm: createdOffcut.lengthCm,
-          storageLocation: createdOffcut.storageLocation || 'Cajón de Retazos',
-          suggestedUse: createdOffcut.suggestedUse || 'Espejos, manijas, ópticas',
-          status: 'AVAILABLE',
-          notes: createdOffcut.notes || `Retazo devuelto en trabajo ${newJob.vehicle}`,
-        });
-      }
     }
 
     return { job: newJob, updatedRoll };
   }
 
-  // Get Offcuts
-  static async getOffcuts(): Promise<PPFOffcut[]> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('ppf_offcuts')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (!error && data) {
-          return (data as unknown as SupabaseOffcutRow[]).map((o) => ({
-            id: o.id,
-            parentRollId: o.parent_roll_id,
-            parentRollCode: o.parent_roll_code,
-            brand: o.brand || 'Kryptonite',
-            finish: o.finish,
-            widthCm: Number(o.width_cm),
-            lengthCm: Number(o.length_cm),
-            storageLocation: o.storage_location,
-            suggestedUse: o.suggested_use,
-            status: o.status,
-            usedInJobId: o.used_in_job_id,
-            createdAt: o.created_at,
-            notes: o.notes,
-          }));
-        }
-      } catch (err) {
-        console.warn('Error reading offcuts from Supabase:', err);
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY_OFFCUTS);
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {}
-      }
-      localStorage.setItem(LOCAL_STORAGE_KEY_OFFCUTS, JSON.stringify(INITIAL_OFFCUTS));
-    }
-    return INITIAL_OFFCUTS;
-  }
-
-  // Add Offcut
-  static async addOffcut(offcut: Omit<PPFOffcut, 'id' | 'createdAt'>): Promise<PPFOffcut> {
-    const newOffcut: PPFOffcut = {
-      ...offcut,
-      brand: offcut.brand || 'Kryptonite',
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `offcut-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const { data } = await supabase
-          .from('ppf_offcuts')
-          .insert({
-            parent_roll_id: newOffcut.parentRollId,
-            parent_roll_code: newOffcut.parentRollCode,
-            brand: newOffcut.brand,
-            finish: newOffcut.finish,
-            width_cm: newOffcut.widthCm,
-            length_cm: newOffcut.lengthCm,
-            storage_location: newOffcut.storageLocation,
-            suggested_use: newOffcut.suggestedUse,
-            status: newOffcut.status,
-            notes: newOffcut.notes,
-          })
-          .select()
-          .single();
-
-        if (data) {
-          newOffcut.id = data.id;
-        }
-      } catch (err) {
-        console.error('Supabase addOffcut failed:', err);
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      const existing = await this.getOffcuts();
-      localStorage.setItem(LOCAL_STORAGE_KEY_OFFCUTS, JSON.stringify([newOffcut, ...existing]));
-    }
-    return newOffcut;
-  }
-
-  // Update Offcut
-  static async updateOffcutStatus(id: string, status: 'AVAILABLE' | 'USED' | 'DISCARDED', notes?: string): Promise<void> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase
-          .from('ppf_offcuts')
-          .update({ status, ...(notes ? { notes } : {}) })
-          .eq('id', id);
-      } catch (err) {
-        console.error('Supabase updateOffcutStatus failed:', err);
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      const existing = await this.getOffcuts();
-      const updated = existing.map((o) => (o.id === id ? { ...o, status, ...(notes ? { notes } : {}) } : o));
-      localStorage.setItem(LOCAL_STORAGE_KEY_OFFCUTS, JSON.stringify(updated));
-    }
-  }
-
-  // Delete Offcut
-  static async deleteOffcut(id: string): Promise<void> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase.from('ppf_offcuts').delete().eq('id', id);
-      } catch (err) {
-        console.error('Supabase deleteOffcut failed:', err);
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      const existing = await this.getOffcuts();
-      localStorage.setItem(LOCAL_STORAGE_KEY_OFFCUTS, JSON.stringify(existing.filter((o) => o.id !== id)));
-    }
-  }
-
   // Stats calculation
-  static calculateStats(rolls: PPFRoll[], jobs: PPFJobConsumption[], offcuts: PPFOffcut[], lowStockThreshold = 3.0): PPFStats {
+  static calculateStats(rolls: PPFRoll[], jobs: PPFJobConsumption[], lowStockThreshold = 3.0): PPFStats {
     const totalRolls = rolls.length;
     const activeRolls = rolls.filter((r) => r.status === 'ACTIVE').length;
     const sealedRolls = rolls.filter((r) => r.status === 'SEALED').length;
@@ -718,70 +487,28 @@ export class StockService {
       }, 0);
 
     const totalMetersUsed = jobs.reduce((acc, j) => acc + Number(j.metersUsed), 0);
-    const totalMetersScrap = jobs.reduce((acc, j) => acc + Number(j.metersScrap || 0), 0);
-    const totalMetersCut = totalMetersUsed + totalMetersScrap;
-
-    const overallScrapRate = totalMetersCut > 0 ? (totalMetersScrap / totalMetersCut) * 100 : 0;
-
-    const totalScrapCostWasted = jobs.reduce((acc, j) => {
-      if (j.metersScrap && j.metersScrap > 0) {
-        const roll = rolls.find((r) => r.id === j.rollId || r.code === j.rollCode);
-        const costPerM = roll && roll.initialMeters > 0 ? roll.costPerRoll / roll.initialMeters : 86.66;
-        return acc + costPerM * j.metersScrap;
-      }
-      return acc;
-    }, 0);
 
     const installerMap: {
       [name: string]: {
         jobsCount: number;
         metersUsed: number;
-        metersScrap: number;
-        costWasted: number;
       };
     } = {};
 
     jobs.forEach((j) => {
       const name = j.installer || 'Sin asignar';
       if (!installerMap[name]) {
-        installerMap[name] = { jobsCount: 0, metersUsed: 0, metersScrap: 0, costWasted: 0 };
+        installerMap[name] = { jobsCount: 0, metersUsed: 0 };
       }
       installerMap[name].jobsCount += 1;
       installerMap[name].metersUsed += Number(j.metersUsed);
-      installerMap[name].metersScrap += Number(j.metersScrap || 0);
-
-      const roll = rolls.find((r) => r.id === j.rollId || r.code === j.rollCode);
-      const costPerM = roll && roll.initialMeters > 0 ? roll.costPerRoll / roll.initialMeters : 86.66;
-      installerMap[name].costWasted += costPerM * Number(j.metersScrap || 0);
     });
 
-    const installerStats = Object.entries(installerMap).map(([name, data]) => {
-      const totalCut = data.metersUsed + data.metersScrap;
-      const rate = totalCut > 0 ? (data.metersScrap / totalCut) * 100 : 0;
-      return {
-        name,
-        jobsCount: data.jobsCount,
-        metersUsed: Number(data.metersUsed.toFixed(2)),
-        metersScrap: Number(data.metersScrap.toFixed(2)),
-        wasteRatePercent: Number(rate.toFixed(1)),
-        costWasted: Number(data.costWasted.toFixed(2)),
-      };
-    }).sort((a, b) => a.wasteRatePercent - b.wasteRatePercent);
-
-    const scrapReasonsMap: { [reason: string]: { count: number; meters: number } } = {};
-    jobs.forEach((j) => {
-      if (j.metersScrap && j.metersScrap > 0) {
-        const reason = j.scrapReason || 'OTHER';
-        if (!scrapReasonsMap[reason]) {
-          scrapReasonsMap[reason] = { count: 0, meters: 0 };
-        }
-        scrapReasonsMap[reason].count += 1;
-        scrapReasonsMap[reason].meters += Number(j.metersScrap);
-      }
-    });
-
-    const availableOffcuts = offcuts.filter((o) => o.status === 'AVAILABLE');
-    const usedOffcuts = offcuts.filter((o) => o.status === 'USED');
+    const installerStats = Object.entries(installerMap).map(([name, data]) => ({
+      name,
+      jobsCount: data.jobsCount,
+      metersUsed: Number(data.metersUsed.toFixed(2)),
+    })).sort((a, b) => b.metersUsed - a.metersUsed);
 
     return {
       totalRolls,
@@ -792,13 +519,8 @@ export class StockService {
       lowStockRolls,
       estimatedInventoryValue: Number(estimatedInventoryValue.toFixed(2)),
       totalMetersUsed: Number(totalMetersUsed.toFixed(2)),
-      totalMetersScrap: Number(totalMetersScrap.toFixed(2)),
-      overallScrapRate: Number(overallScrapRate.toFixed(1)),
-      totalScrapCostWasted: Number(totalScrapCostWasted.toFixed(2)),
+      totalJobsCount: jobs.length,
       installerStats,
-      scrapReasonsMap,
-      availableOffcutsCount: availableOffcuts.length,
-      usedOffcutsCount: usedOffcuts.length,
     };
   }
 
@@ -822,7 +544,7 @@ export class StockService {
   }
 
   static exportJobsToCSV(jobs: PPFJobConsumption[]): void {
-    const headers = ['Fecha', 'Bobina', 'Vehiculo', 'Patente', 'Cliente', 'OT', 'Instalador', 'Piezas', 'Metros Usados', 'Metros Scrap', 'Causa Scrap', 'Costo Total'];
+    const headers = ['Fecha', 'Bobina', 'Vehiculo', 'Patente', 'Cliente', 'OT', 'Instalador', 'Piezas', 'Metros Cortados', 'Costo Calculado'];
     const rows = jobs.map((j) => [
       `"${new Date(j.jobDate).toLocaleDateString()}"`,
       `"${j.rollCode}"`,
@@ -833,8 +555,6 @@ export class StockService {
       `"${j.installer}"`,
       `"${(j.parts || []).join(' | ')}"`,
       j.metersUsed,
-      j.metersScrap,
-      `"${j.scrapReason || ''}"`,
       j.costCalculated,
     ]);
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { PPFJobConsumption } from '@/types/ppf';
-import { Scissors, AlertTriangle, Search, Car } from 'lucide-react';
+import { Scissors, Search, Car } from 'lucide-react';
 
 interface JobsHistoryViewProps {
   jobs: PPFJobConsumption[];
@@ -12,7 +12,6 @@ interface JobsHistoryViewProps {
 export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNewJob }) => {
   const [search, setSearch] = useState('');
   const [filterInstaller, setFilterInstaller] = useState('ALL');
-  const [filterScrapOnly, setFilterScrapOnly] = useState(false);
 
   const installers = Array.from(new Set(jobs.map((j) => j.installer))).filter(Boolean);
 
@@ -24,9 +23,8 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
       j.rollCode.toLowerCase().includes(search.toLowerCase());
 
     const matchesInstaller = filterInstaller === 'ALL' || j.installer === filterInstaller;
-    const matchesScrap = !filterScrapOnly || (j.metersScrap && j.metersScrap > 0);
 
-    return matchesSearch && matchesInstaller && matchesScrap;
+    return matchesSearch && matchesInstaller;
   });
 
   return (
@@ -69,14 +67,6 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={() => setFilterScrapOnly(!filterScrapOnly)}
-            className={`btn btn-sm ${filterScrapOnly ? 'btn-danger' : 'btn-secondary'}`}
-          >
-            <AlertTriangle size={14} />
-            <span>{filterScrapOnly ? 'Mostrando solo mermas' : 'Filtrar con Scrap'}</span>
-          </button>
-
           <button onClick={onOpenNewJob} className="btn btn-primary btn-sm">
             <Scissors size={14} />
             <span>+ Nuevo Corte</span>
@@ -102,13 +92,12 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {filteredJobs.map((job) => {
-            const hasScrap = job.metersScrap && job.metersScrap > 0;
             return (
               <div
                 key={job.id}
                 style={{
                   background: 'var(--bg-card)',
-                  border: hasScrap ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid var(--border-card)',
+                  border: '1px solid var(--border-card)',
                   borderRadius: 'var(--radius-md)',
                   padding: '16px 20px',
                   display: 'flex',
@@ -180,32 +169,14 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
                   </div>
                 </div>
 
-                {/* Right: Meters, Scrap Badge & Cost */}
+                {/* Right: Meters & Meta */}
                 <div style={{ textAlign: 'right', minWidth: '160px' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '6px' }}>
                     <span className="mono" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                       {job.metersUsed} m
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>aplicados</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>cortados</span>
                   </div>
-
-                  {hasScrap && (
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '0.75rem',
-                      color: '#f87171',
-                      background: 'var(--color-danger-bg)',
-                      padding: '2px 7px',
-                      borderRadius: '4px',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      marginTop: '4px',
-                    }}>
-                      <AlertTriangle size={12} />
-                      <span>+{job.metersScrap}m Scrap ({job.scrapReason})</span>
-                    </div>
-                  )}
 
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                     <span>Por <strong>{job.installer}</strong></span> • <span>{new Date(job.jobDate).toLocaleDateString()}</span>

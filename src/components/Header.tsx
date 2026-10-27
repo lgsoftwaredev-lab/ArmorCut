@@ -8,7 +8,7 @@ interface HeaderProps {
   totalMeters: number;
   activeRollsCount: number;
   lowStockCount: number;
-  scrapRate: number;
+  totalJobsCount: number;
   onOpenNewRoll: () => void;
   onOpenNewJob: () => void;
   onOpenSupabaseGuide: () => void;
@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
   totalMeters,
   activeRollsCount,
   lowStockCount,
-  scrapRate,
+  totalJobsCount,
   onOpenNewRoll,
   onOpenNewJob,
   onOpenSupabaseGuide,
@@ -87,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-              {shopName || 'PLUSCARS DETAILING'} • CONTROL DE STOCK & MERMAS
+              {shopName || 'PLUSCARS DETAILING'} • CONTROL DE STOCK & CORTES
             </div>
           </div>
         </div>
@@ -114,9 +114,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div style={{ width: '1px', height: '24px', background: 'var(--border-subtle)' }} />
           <div>
-            <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>% Scrap (Merma)</span>
-            <strong style={{ color: scrapRate > 10 ? 'var(--color-danger)' : 'var(--color-success)', fontSize: '0.95rem' }}>
-              {scrapRate}%
+            <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Cortes Realizados</span>
+            <strong style={{ color: 'var(--accent-red)', fontSize: '0.95rem' }}>
+              {totalJobsCount}
             </strong>
           </div>
 

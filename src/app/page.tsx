@@ -4,11 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   PPFRoll, 
   PPFJobConsumption, 
-  PPFOffcut, 
   CreateRollInput, 
-  CreateJobInput, 
-  JobCreatedOffcutInput, 
-  CreateOffcutInput 
+  CreateJobInput 
 } from '@/types/ppf';
 import { StockService } from '@/lib/stockService';
 import { Header } from '@/components/Header';
@@ -16,7 +13,6 @@ import { RollCard } from '@/components/RollCard';
 import { NewRollModal } from '@/components/NewRollModal';
 import { NewJobModal } from '@/components/NewJobModal';
 import { JobsHistoryView } from '@/components/JobsHistoryView';
-import { OffcutsView } from '@/components/OffcutsView';
 import { MetricsView } from '@/components/MetricsView';
 import { SupabaseGuideModal } from '@/components/SupabaseGuideModal';
 import { 
@@ -30,12 +26,11 @@ import {
 } from 'lucide-react';
 
 export default function ArmorCutDashboard() {
-  const [activeTab, setActiveTab] = useState<'ROLLS' | 'JOBS' | 'OFFCUTS' | 'METRICS' | 'SETTINGS'>('ROLLS');
+  const [activeTab, setActiveTab] = useState<'ROLLS' | 'JOBS' | 'METRICS'>('ROLLS');
 
   // Core Data State
   const [rolls, setRolls] = useState<PPFRoll[]>([]);
   const [jobs, setJobs] = useState<PPFJobConsumption[]>([]);
-  const [offcuts, setOffcuts] = useState<PPFOffcut[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters for Rolls
@@ -52,18 +47,16 @@ export default function ArmorCutDashboard() {
 
   const [isSupabaseGuideOpen, setIsSupabaseGuideOpen] = useState(false);
 
-  // Load Initial Data
+  // Load Data
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [fetchedRolls, fetchedJobs, fetchedOffcuts] = await Promise.all([
+      const [fetchedRolls, fetchedJobs] = await Promise.all([
         StockService.getRolls(),
         StockService.getJobs(),
-        StockService.getOffcuts(),
       ]);
       setRolls(fetchedRolls);
       setJobs(fetchedJobs);
-      setOffcuts(fetchedOffcuts);
     } catch (err) {
       console.error('Error loading inventory data:', err);
     } finally {
@@ -75,14 +68,10 @@ export default function ArmorCutDashboard() {
     let ignore = false;
     StockService.getRolls()
       .then(async (fetchedRolls) => {
-        const [fetchedJobs, fetchedOffcuts] = await Promise.all([
-          StockService.getJobs(),
-          StockService.getOffcuts(),
-        ]);
+        const fetchedJobs = await StockService.getJobs();
         if (!ignore) {
           setRolls(fetchedRolls);
           setJobs(fetchedJobs);
-          setOffcuts(fetchedOffcuts);
           setIsLoading(false);
         }
       })
@@ -113,24 +102,8 @@ export default function ArmorCutDashboard() {
   };
 
   // Handlers for Jobs
-  const handleSaveJob = async (jobData: CreateJobInput, createdOffcut?: JobCreatedOffcutInput) => {
-    await StockService.recordJob(jobData, createdOffcut);
-    await loadData();
-  };
-
-  // Handlers for Offcuts
-  const handleAddOffcut = async (offcutData: CreateOffcutInput) => {
-    await StockService.addOffcut(offcutData);
-    await loadData();
-  };
-
-  const handleUpdateOffcutStatus = async (id: string, status: 'AVAILABLE' | 'USED' | 'DISCARDED') => {
-    await StockService.updateOffcutStatus(id, status);
-    await loadData();
-  };
-
-  const handleDeleteOffcut = async (id: string) => {
-    await StockService.deleteOffcut(id);
+  const handleSaveJob = async (jobData: CreateJobInput) => {
+    await StockService.recordJob(jobData);
     await loadData();
   };
 
@@ -144,7 +117,7 @@ export default function ArmorCutDashboard() {
   };
 
   // Stats calculation
-  const stats = StockService.calculateStats(rolls, jobs, offcuts, 3.0);
+  const stats = StockService.calculateStats(rolls, jobs, 3.0);
 
   // Filtered Rolls
   const filteredRolls = rolls.filter((roll) => {
@@ -172,7 +145,7 @@ export default function ArmorCutDashboard() {
         totalMeters={stats.totalStockMeters}
         activeRollsCount={stats.activeRolls}
         lowStockCount={stats.lowStockRolls.length}
-        scrapRate={stats.overallScrapRate}
+        totalJobsCount={jobs.length}
         onOpenNewRoll={() => {
           setEditingRoll(null);
           setIsNewRollModalOpen(true);
@@ -239,28 +212,7 @@ export default function ArmorCutDashboard() {
               }}
             >
               <Scissors size={17} />
-              <span>Cortes & Consumos ({jobs.length})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('OFFCUTS')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-md)',
-                border: activeTab === 'OFFCUTS' ? '1px solid var(--accent-red)' : '1px solid transparent',
-                background: activeTab === 'OFFCUTS' ? 'rgba(230, 25, 55, 0.15)' : 'transparent',
-                color: activeTab === 'OFFCUTS' ? 'var(--accent-red)' : 'var(--text-secondary)',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                transition: 'all var(--transition-fast)',
-              }}
-            >
-              <Layers size={17} />
-              <span>Banco de Retazos ({stats.availableOffcutsCount})</span>
+              <span>Cortes & Salidas ({jobs.length})</span>
             </button>
 
             <button
@@ -281,7 +233,7 @@ export default function ArmorCutDashboard() {
               }}
             >
               <TrendingUp size={17} />
-              <span>Métricas & Scrap</span>
+              <span>Métricas & Reportes</span>
             </button>
           </div>
 
@@ -365,8 +317,8 @@ export default function ArmorCutDashboard() {
             {/* Low stock alert banner */}
             {stats.lowStockRolls.length > 0 && (
               <div style={{
-                background: 'rgba(245, 158, 11, 0.08)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
+                background: 'rgba(230, 25, 55, 0.08)',
+                border: '1px solid rgba(230, 25, 55, 0.3)',
                 borderRadius: 'var(--radius-md)',
                 padding: '12px 18px',
                 display: 'flex',
@@ -374,13 +326,13 @@ export default function ArmorCutDashboard() {
                 gap: '12px',
                 marginBottom: '20px',
               }}>
-                <AlertCircle size={20} color="var(--color-warning)" />
+                <AlertCircle size={20} color="var(--accent-red)" />
                 <div style={{ fontSize: '0.85rem' }}>
-                  <strong style={{ color: 'var(--color-warning)' }}>
-                    Alerta de stock bajo:
+                  <strong style={{ color: 'var(--accent-red)' }}>
+                    Alerta de reposición:
                   </strong>{' '}
                   Hay {stats.lowStockRolls.length} bobina(s) con menos de 3.00 metros disponibles (
-                  {stats.lowStockRolls.map((r) => `${r.code} - ${r.currentMeters}m`).join(', ')}). Considera reponer stock o reservar para cortes chicos.
+                  {stats.lowStockRolls.map((r) => `${r.code} - ${r.currentMeters}m`).join(', ')}). Recuerda pedir reposición al proveedor.
                 </div>
               </div>
             )}
@@ -438,18 +390,7 @@ export default function ArmorCutDashboard() {
           />
         )}
 
-        {/* Tab 3: OFFCUTS BANK */}
-        {activeTab === 'OFFCUTS' && (
-          <OffcutsView
-            offcuts={offcuts}
-            rolls={rolls}
-            onAddOffcut={handleAddOffcut}
-            onUpdateStatus={handleUpdateOffcutStatus}
-            onDeleteOffcut={handleDeleteOffcut}
-          />
-        )}
-
-        {/* Tab 4: METRICS & SCRAP */}
+        {/* Tab 3: METRICS */}
         {activeTab === 'METRICS' && (
           <MetricsView stats={stats} />
         )}

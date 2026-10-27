@@ -1,18 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PPFRoll, ScrapReason, CreateJobInput, JobCreatedOffcutInput } from '@/types/ppf';
-import { Scissors, AlertTriangle, X, Check, Layers, Plus } from 'lucide-react';
+import { PPFRoll, CreateJobInput } from '@/types/ppf';
+import { Scissors, X, Check, Plus } from 'lucide-react';
 
 interface NewJobModalProps {
   isOpen: boolean;
   onClose: () => void;
   rolls: PPFRoll[];
   preselectedRoll?: PPFRoll | null;
-  onSaveJob: (
-    jobData: CreateJobInput,
-    createdOffcut?: JobCreatedOffcutInput
-  ) => Promise<void>;
+  onSaveJob: (jobData: CreateJobInput) => Promise<void>;
 }
 
 const COMMON_PARTS = [
@@ -29,21 +26,11 @@ const COMMON_PARTS = [
   'Pantalla Interior / Consola',
 ];
 
-const SCRAP_REASONS: { value: ScrapReason; label: string }[] = [
-  { value: 'CONTAMINATION', label: 'Polvo / Pelusa / Contaminación de agua' },
-  { value: 'STRETCH_TEAR', label: 'Estiramiento excesivo / Rotura en curvatura' },
-  { value: 'CUTTING_ERROR', label: 'Error de corte en plotter o manual con cutter' },
-  { value: 'SILVERING_ADHESIVE', label: 'Silvering / Marcas de adhesivo y huellas' },
-  { value: 'INSTALLATION_ERROR', label: 'Fallo de espátula / Error de colocación' },
-  { value: 'DEFECTIVE_MATERIAL', label: 'Falla o defecto de fábrica en film' },
-  { value: 'OTHER', label: 'Otro motivo' },
-];
-
 const JobModalContent: React.FC<{
   rolls: PPFRoll[];
   preselectedRoll?: PPFRoll | null;
   onClose: () => void;
-  onSaveJob: (jobData: CreateJobInput, createdOffcut?: JobCreatedOffcutInput) => Promise<void>;
+  onSaveJob: (jobData: CreateJobInput) => Promise<void>;
 }> = ({ rolls, preselectedRoll, onClose, onSaveJob }) => {
   const activeRolls = rolls.filter((r) => r.status === 'ACTIVE' || r.id === preselectedRoll?.id);
 
@@ -58,28 +45,14 @@ const JobModalContent: React.FC<{
   const [selectedParts, setSelectedParts] = useState<string[]>(['Capot Completo']);
   const [customPart, setCustomPart] = useState('');
   const [metersUsed, setMetersUsed] = useState(2.2);
-
-  // Scrap State
-  const [hasScrap, setHasScrap] = useState(false);
-  const [metersScrap, setMetersScrap] = useState(0.4);
-  const [scrapReason, setScrapReason] = useState<ScrapReason>('CONTAMINATION');
-  const [scrapNotes, setScrapNotes] = useState('');
-
-  // Offcut State
-  const [hasOffcut, setHasOffcut] = useState(false);
-  const [offcutWidthCm, setOffcutWidthCm] = useState(45);
-  const [offcutLengthCm, setOffcutLengthCm] = useState(110);
-  const [offcutLocation, setOffcutLocation] = useState('Cajón 1 - Retazos Capot');
-  const [offcutSuggestedUse, setOffcutSuggestedUse] = useState('Espejos retrovisores, tazas de puerta o B-Pillars');
-  const [offcutNotes, setOffcutNotes] = useState('');
-
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentRoll = rolls.find((r) => r.id === selectedRollId) || activeRolls[0];
-  const totalMetersDeducted = Number(metersUsed) + (hasScrap ? Number(metersScrap) : 0);
+  const metersDeducted = Number(metersUsed) || 0;
   const costPerMeter = currentRoll && currentRoll.initialMeters > 0 ? currentRoll.costPerRoll / currentRoll.initialMeters : 90;
-  const scrapCostEstimate = (costPerMeter * (hasScrap ? Number(metersScrap) : 0)).toFixed(2);
+  const totalCostEstimate = (costPerMeter * metersDeducted).toFixed(2);
+  const remainingAfterJob = currentRoll ? Math.max(0, currentRoll.currentMeters - metersDeducted) : 0;
 
   const togglePart = (part: string) => {
     if (selectedParts.includes(part)) {
@@ -106,13 +79,13 @@ const JobModalContent: React.FC<{
       alert('Por favor completa el vehículo, cliente e instalador.');
       return;
     }
-    if (totalMetersDeducted <= 0) {
+    if (metersDeducted <= 0) {
       alert('Ingresa los metros utilizados.');
       return;
     }
-    if (currentRoll.currentMeters < totalMetersDeducted) {
+    if (currentRoll.currentMeters < metersDeducted) {
       const confirmExceed = confirm(
-        `Atención: La bobina tiene ${currentRoll.currentMeters.toFixed(2)}m disponibles pero el trabajo requiere ${totalMetersDeducted.toFixed(2)}m. ¿Deseas descontar de todos modos?`
+        `Atención: La bobina tiene ${currentRoll.currentMeters.toFixed(2)}m disponibles pero el trabajo requiere ${metersDeducted.toFixed(2)}m. ¿Deseas descontar de todos modos?`
       );
       if (!confirmExceed) return;
     }
@@ -132,23 +105,10 @@ const JobModalContent: React.FC<{
         installer: installer.trim(),
         parts: selectedParts,
         metersUsed: Number(metersUsed),
-        metersScrap: hasScrap ? Number(metersScrap) : 0,
-        scrapReason: hasScrap ? scrapReason : undefined,
-        scrapNotes: hasScrap && scrapNotes.trim() ? scrapNotes.trim() : undefined,
         notes: notes.trim() || undefined,
       };
 
-      const offcutData: JobCreatedOffcutInput | undefined = hasOffcut && offcutWidthCm > 0 && offcutLengthCm > 0
-        ? {
-            widthCm: Number(offcutWidthCm),
-            lengthCm: Number(offcutLengthCm),
-            storageLocation: offcutLocation.trim() || 'Cajón de Retazos',
-            suggestedUse: offcutSuggestedUse.trim() || 'Piezas chicas',
-            notes: offcutNotes.trim() || undefined,
-          }
-        : undefined;
-
-      await onSaveJob(jobData, offcutData);
+      await onSaveJob(jobData);
       onClose();
     } catch (err) {
       console.error('Error saving job:', err);
@@ -181,7 +141,7 @@ const JobModalContent: React.FC<{
           border: '1px solid var(--border-card)',
           borderRadius: 'var(--radius-lg)',
           width: '100%',
-          maxWidth: '680px',
+          maxWidth: '650px',
           maxHeight: '90vh',
           overflowY: 'auto',
           boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
@@ -212,7 +172,7 @@ const JobModalContent: React.FC<{
               <Scissors size={20} color="var(--accent-red)" />
             </div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-              Registrar Corte & Descuento de PPF
+              Registrar Salida de Material (Corte)
             </h2>
           </div>
           <button
@@ -382,7 +342,7 @@ const JobModalContent: React.FC<{
 
           {/* Meters Used */}
           <div className="form-group">
-            <label className="form-label">Metros Lineales Instalados (Auto) *</label>
+            <label className="form-label">Metros Lineales Cortados / Descontados *</label>
             <input
               type="number"
               step="0.05"
@@ -394,176 +354,43 @@ const JobModalContent: React.FC<{
             />
           </div>
 
-          {/* Scrap Section (Collapsible Toggle) */}
+          {/* Live Cut Summary Box */}
           <div style={{
-            background: hasScrap ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-input)',
-            border: hasScrap ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--border-card)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-md)',
-            padding: '14px',
-            marginBottom: '14px',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <AlertTriangle size={18} color={hasScrap ? 'var(--color-danger)' : 'var(--text-muted)'} />
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: hasScrap ? '#fca5a5' : 'var(--text-primary)' }}>
-                  ¿Hubo Scrap o Desperdicio de Material?
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                id="scrapToggle"
-                checked={hasScrap}
-                onChange={(e) => setHasScrap(e.target.checked)}
-                style={{ width: '18px', height: '18px', accentColor: 'var(--color-danger)', cursor: 'pointer' }}
-              />
+            <div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Quedará en Bobina:</span>
+              <strong className="mono" style={{ color: remainingAfterJob < 3 ? 'var(--color-warning)' : 'var(--text-primary)' }}>
+                {remainingAfterJob.toFixed(2)} m restantes
+              </strong>
             </div>
 
-            {hasScrap && (
-              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div className="form-row">
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Metros de Scrap (Arruinados) *</label>
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0.05"
-                      className="form-input mono"
-                      value={metersScrap}
-                      onChange={(e) => setMetersScrap(Number(e.target.value))}
-                      required={hasScrap}
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Motivo de la Merma *</label>
-                    <select
-                      className="form-select"
-                      value={scrapReason}
-                      onChange={(e) => setScrapReason(e.target.value as ScrapReason)}
-                    >
-                      {SCRAP_REASONS.map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Detalle del Error o Rotura (Opcional)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={scrapNotes}
-                    onChange={(e) => setScrapNotes(e.target.value)}
-                    placeholder="Ej: Contaminación de polvo en capot al bajar film, se repitió la pieza"
-                  />
-                </div>
-
-                <div style={{ fontSize: '0.75rem', color: '#fca5a5' }}>
-                  Pérdida económica calculada en este corte: ~<strong>${scrapCostEstimate} USD</strong>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Usable Offcut Section (Collapsible Toggle) */}
-          <div style={{
-            background: hasOffcut ? 'rgba(230, 25, 55, 0.08)' : 'var(--bg-input)',
-            border: hasOffcut ? '1px solid rgba(230, 25, 55, 0.35)' : '1px solid var(--border-card)',
-            borderRadius: 'var(--radius-md)',
-            padding: '14px',
-            marginBottom: '14px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Layers size={18} color={hasOffcut ? 'var(--accent-red)' : 'var(--text-muted)'} />
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: hasOffcut ? 'var(--accent-red)' : 'var(--text-primary)' }}>
-                  ¿Generó un Retazo Sobrante Aprovechable?
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                id="offcutToggle"
-                checked={hasOffcut}
-                onChange={(e) => setHasOffcut(e.target.checked)}
-                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-red)', cursor: 'pointer' }}
-              />
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Costo Estimado Salida:</span>
+              <strong className="mono" style={{ color: 'var(--accent-red)', fontSize: '1rem' }}>
+                ~${totalCostEstimate} USD
+              </strong>
             </div>
-
-            {hasOffcut && (
-              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div className="form-row">
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Ancho del Retazo (cm)</label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="10"
-                      className="form-input mono"
-                      value={offcutWidthCm}
-                      onChange={(e) => setOffcutWidthCm(Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Largo del Retazo (cm)</label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="10"
-                      className="form-input mono"
-                      value={offcutLengthCm}
-                      onChange={(e) => setOffcutLengthCm(Number(e.target.value))}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Ubicación para Guardarlo en Taller</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={offcutLocation}
-                    onChange={(e) => setOffcutLocation(e.target.value)}
-                    placeholder="Ej: Cajón 1 - Retazos Capot"
-                  />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Uso Sugerido para este Retazo</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={offcutSuggestedUse}
-                    onChange={(e) => setOffcutSuggestedUse(e.target.value)}
-                    placeholder="Ej: Espejos retrovisores, B-Pillars, Tazas de Puerta"
-                  />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Notas del Retazo (Opcional)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={offcutNotes}
-                    onChange={(e) => setOffcutNotes(e.target.value)}
-                    placeholder="Observaciones sobre el sobrante"
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           {/* General Job Notes */}
           <div className="form-group">
-            <label className="form-label">Notas del Trabajo / Instalación (Opcional)</label>
+            <label className="form-label">Notas del Trabajo (Opcional)</label>
             <input
               type="text"
               className="form-input"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Detalles sobre el acabado, cliente o proveedor de corte"
+              placeholder="Detalles sobre el corte, observaciones o cliente"
             />
           </div>
 
