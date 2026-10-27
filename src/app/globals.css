@@ -94,6 +94,25 @@ body {
   background-attachment: fixed;
 }
 
+/* Atmospheric PlusCars Monogram Watermark */
+.bg-brand-watermark {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -46%);
+  width: min(82vw, 720px);
+  height: min(82vh, 720px);
+  background-image: url('/brand/pluscars-monogram.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.048;
+  filter: drop-shadow(0 0 90px rgba(230, 25, 55, 0.35));
+  pointer-events: none;
+  z-index: 0;
+  user-select: none;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

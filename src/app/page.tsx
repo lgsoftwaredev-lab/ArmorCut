@@ -127,7 +127,7 @@ export default function ArmorCutDashboard() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
       {/* Top Header */}
       <Header
         shopName={process.env.NEXT_PUBLIC_SHOP_NAME || 'PLUSCARS DETAILING'}

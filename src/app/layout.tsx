@@ -24,7 +24,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <div className="bg-brand-watermark" aria-hidden="true" />
+        {children}
+      </body>
     </html>
   );
 }
