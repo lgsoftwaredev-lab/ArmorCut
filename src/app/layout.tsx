@@ -1,9 +1,16 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ArmorCut PPF | PlusCars Detailing - Control de Stock & Mermas',
-  description: 'Sistema monolítico de gestión de stock de bobinas de PPF, cortes en vehículos, control de scrap y banco de retazos aprovechables.',
+  title: 'ArmorCut PPF | PlusCars Detailing - Control de Stock & Cortes',
+  description: 'Sistema monolítico de gestión de stock de bobinas de PPF y cortes para vehículos en PlusCars Detailing.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#060709',
 };
 
 export default function RootLayout({

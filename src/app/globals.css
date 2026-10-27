@@ -330,3 +330,242 @@ h1, h2, h3, h4, h5 {
 .pulse-alert {
   animation: pulseGlow 2s infinite ease-in-out;
 }
+
+/* ==============================================================================
+   RESPONSIVE LAYOUT CLASSES (Mobile, Tablet, Desktop)
+   ============================================================================== */
+
+.app-header {
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(15, 20, 28, 0.85);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 12px 24px;
+}
+
+.header-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.header-top-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.kpi-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(21, 27, 38, 0.7);
+  padding: 6px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+}
+
+.kpi-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-subtle);
+}
+
+.app-main {
+  flex: 1;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.nav-tabs-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+}
+
+.nav-tabs-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rolls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+  gap: 20px;
+}
+
+.metrics-kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.metrics-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 20px;
+}
+
+/* Mobile Breakpoints (< 768px) */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 10px 14px;
+  }
+
+  .header-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .header-top-row {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .header-brand-title {
+    font-size: 1.1rem !important;
+  }
+
+  .header-brand-sub {
+    font-size: 0.68rem !important;
+  }
+
+  .kpi-bar {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .kpi-divider {
+    display: none;
+  }
+
+  .kpi-item span {
+    font-size: 0.65rem !important;
+  }
+
+  .kpi-item strong {
+    font-size: 0.85rem !important;
+  }
+
+  .kpi-alert-item {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 6px;
+    margin-top: 2px;
+    justify-content: center;
+    display: flex;
+  }
+
+  .app-main {
+    padding: 14px 12px;
+  }
+
+  .nav-tabs-wrapper {
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+
+  .nav-tabs-list {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .nav-tabs-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 7px 12px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .filter-controls-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .filter-search-box {
+    max-width: 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .filter-selects-group {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .filter-selects-group .form-select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .filter-add-btn {
+    width: 100% !important;
+    justify-content: center;
+    padding: 10px !important;
+  }
+
+  .rolls-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .metrics-kpis-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .metrics-details-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .modal-backdrop {
+    padding: 8px;
+  }
+
+  .modal-content {
+    max-height: 94vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-kpis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-selects-group {
+    grid-template-columns: 1fr;
+  }
+}
+

@@ -12,11 +12,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ stats }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* 4 Top KPI Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '16px',
-      }}>
+      <div className="metrics-kpis-grid">
         {/* Card 1: Stock Total */}
         <div style={{
           background: 'var(--bg-card)',
@@ -103,11 +99,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ stats }) => {
       </div>
 
       {/* Two Columns: Cortes por Instalador & Alertas de Reposición */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-        gap: '20px',
-      }}>
+      <div className="metrics-details-grid">
         {/* Col 1: Cortes por Instalador */}
         <div style={{
           background: 'var(--bg-card)',

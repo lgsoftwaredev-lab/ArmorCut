@@ -137,22 +137,14 @@ export default function ArmorCutDashboard() {
       />
 
       {/* Main Container */}
-      <main style={{ flex: 1, maxWidth: '1440px', width: '100%', margin: '0 auto', padding: '24px' }}>
+      <main className="app-main">
         {/* Navigation Tabs */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          borderBottom: '1px solid var(--border-subtle)',
-          paddingBottom: '14px',
-          marginBottom: '24px',
-        }}>
+        <div className="nav-tabs-wrapper">
           {/* Tab buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div className="nav-tabs-list">
             <button
               onClick={() => setActiveTab('ROLLS')}
+              className="nav-tab-btn"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -174,6 +166,7 @@ export default function ArmorCutDashboard() {
 
             <button
               onClick={() => setActiveTab('JOBS')}
+              className="nav-tab-btn"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -195,6 +188,7 @@ export default function ArmorCutDashboard() {
 
             <button
               onClick={() => setActiveTab('METRICS')}
+              className="nav-tab-btn"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -231,7 +225,7 @@ export default function ArmorCutDashboard() {
         {activeTab === 'ROLLS' && (
           <div>
             {/* Search and Filters */}
-            <div style={{
+            <div className="filter-controls-row" style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -240,7 +234,7 @@ export default function ArmorCutDashboard() {
               marginBottom: '20px',
             }}>
               {/* Search box */}
-              <div style={{ position: 'relative', flex: 1, minWidth: '260px', maxWidth: '420px' }}>
+              <div className="filter-search-box" style={{ position: 'relative', flex: 1, minWidth: '240px', maxWidth: '420px' }}>
                 <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
                 <input
                   type="text"
@@ -253,7 +247,7 @@ export default function ArmorCutDashboard() {
               </div>
 
               {/* Status and Finish Selectors */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <div className="filter-selects-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <select
                   className="form-select"
                   value={statusFilter}
@@ -284,7 +278,7 @@ export default function ArmorCutDashboard() {
                     setEditingRoll(null);
                     setIsNewRollModalOpen(true);
                   }}
-                  className="btn btn-primary btn-sm"
+                  className="btn btn-primary btn-sm filter-add-btn"
                 >
                   <Plus size={15} />
                   <span>+ Agregar Bobina</span>
@@ -304,7 +298,7 @@ export default function ArmorCutDashboard() {
                 gap: '12px',
                 marginBottom: '20px',
               }}>
-                <AlertCircle size={20} color="var(--accent-red)" />
+                <AlertCircle size={20} color="var(--accent-red)" style={{ flexShrink: 0 }} />
                 <div style={{ fontSize: '0.85rem' }}>
                   <strong style={{ color: 'var(--accent-red)' }}>
                     Alerta de reposición:
@@ -331,11 +325,7 @@ export default function ArmorCutDashboard() {
                 </p>
               </div>
             ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-                gap: '20px',
-              }}>
+              <div className="rolls-grid">
                 {filteredRolls.map((roll) => (
                   <RollCard
                     key={roll.id}

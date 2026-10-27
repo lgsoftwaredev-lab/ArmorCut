@@ -121,6 +121,7 @@ const RollModalContent: React.FC<{
       >
         {/* Modal Header */}
         <div
+          className="modal-header"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -139,11 +140,12 @@ const RollModalContent: React.FC<{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
               <Layers size={20} color="var(--accent-red)" />
             </div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 700 }}>
               {editingRoll ? 'Editar Bobina de PPF' : 'Dar de Alta Bobina Kryptonite'}
             </h2>
           </div>
@@ -154,6 +156,7 @@ const RollModalContent: React.FC<{
               border: 'none',
               color: 'var(--text-muted)',
               cursor: 'pointer',
+              padding: '4px',
             }}
           >
             <X size={20} />
@@ -161,7 +164,7 @@ const RollModalContent: React.FC<{
         </div>
 
         {/* Modal Body Form */}
-        <form onSubmit={handleSubmit} style={{ padding: '20px 24px' }}>
+        <form onSubmit={handleSubmit} className="modal-body" style={{ padding: '20px 24px' }}>
           {/* Quick Preset Selector */}
           {!editingRoll && (
             <div style={{ marginBottom: '16px' }}>

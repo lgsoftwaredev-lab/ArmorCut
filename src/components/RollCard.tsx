@@ -117,7 +117,7 @@ export const RollCard: React.FC<RollCardProps> = ({
         </h3>
 
         {/* Location & Width */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 12px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <MapPin size={13} /> {roll.location || 'Taller'}
           </span>

@@ -30,7 +30,7 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
   return (
     <div>
       {/* Search and Filters */}
-      <div style={{
+      <div className="filter-controls-row" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -38,19 +38,19 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
         gap: '12px',
         marginBottom: '20px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '260px' }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: '380px' }}>
-            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
-            <input
-              type="text"
-              placeholder="Buscar por auto, cliente, patente o bobina..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="form-input"
-              style={{ paddingLeft: '36px' }}
-            />
-          </div>
+        <div className="filter-search-box" style={{ position: 'relative', flex: 1, minWidth: '240px', maxWidth: '380px' }}>
+          <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
+          <input
+            type="text"
+            placeholder="Buscar por auto, cliente, patente o bobina..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="form-input"
+            style={{ paddingLeft: '36px' }}
+          />
+        </div>
 
+        <div className="filter-selects-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <select
             className="form-select"
             value={filterInstaller}
@@ -64,10 +64,8 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
               </option>
             ))}
           </select>
-        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={onOpenNewJob} className="btn btn-primary btn-sm">
+          <button onClick={onOpenNewJob} className="btn btn-primary btn-sm filter-add-btn">
             <Scissors size={14} />
             <span>+ Nuevo Corte</span>
           </button>
@@ -95,23 +93,12 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
             return (
               <div
                 key={job.id}
-                style={{
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-card)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '16px 20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '14px',
-                  transition: 'background var(--transition-fast)',
-                }}
+                className="job-item"
               >
                 {/* Left: Vehicle & Client */}
-                <div style={{ minWidth: '220px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <Car size={16} color="var(--accent-red)" />
+                <div style={{ flex: 1, minWidth: 'min(100%, 220px)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                    <Car size={16} color="var(--accent-red)" style={{ flexShrink: 0 }} />
                     <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{job.vehicle}</strong>
                     {job.licensePlate && (
                       <span className="mono" style={{
@@ -133,7 +120,7 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
                 </div>
 
                 {/* Middle: Parts and Roll */}
-                <div style={{ flex: 1, minWidth: '240px' }}>
+                <div style={{ flex: 1, minWidth: 'min(100%, 240px)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '6px' }}>
                     <span className="mono" style={{
                       fontSize: '0.75rem',
@@ -170,7 +157,7 @@ export const JobsHistoryView: React.FC<JobsHistoryViewProps> = ({ jobs, onOpenNe
                 </div>
 
                 {/* Right: Meters & Meta */}
-                <div style={{ textAlign: 'right', minWidth: '160px' }}>
+                <div className="job-item-right" style={{ textAlign: 'right', minWidth: 'min(100%, 160px)' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '6px' }}>
                     <span className="mono" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                       {job.metersUsed} m

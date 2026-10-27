@@ -149,6 +149,7 @@ const JobModalContent: React.FC<{
       >
         {/* Header */}
         <div
+          className="modal-header"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -167,23 +168,24 @@ const JobModalContent: React.FC<{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
               <Scissors size={20} color="var(--accent-red)" />
             </div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 700 }}>
               Registrar Salida de Material (Corte)
             </h2>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
           >
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ padding: '20px 24px' }}>
+        <form onSubmit={handleSubmit} className="modal-body" style={{ padding: '20px 24px' }}>
           {/* Roll Selector & Live preview */}
           <div className="form-group">
             <label className="form-label">
