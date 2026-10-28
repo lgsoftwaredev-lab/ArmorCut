@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { STANDARD_PANELS } from '@/data/materialsAndPanels';
-import { buildTechnicalCADVehicle, PanelRegistration } from './TechnicalCarBuilder';
 import { RotateCw, Shield, Eye, Layers, Check, LayoutGrid, Sparkles } from 'lucide-react';
 
 interface Vehicle3DShowroomProps {
@@ -17,8 +16,6 @@ interface Vehicle3DShowroomProps {
   vehicleName?: string;
 }
 
-type ModelViewMode = 'CAD' | 'GLB';
-
 export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
   selectedPanelIds,
   onTogglePanel,
@@ -28,8 +25,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
   vehicleName = 'Volkswagen Golf GTI Clubsport MK7',
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
-  const [modelMode, setModelMode] = useState<ModelViewMode>('CAD');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isRotating, setIsRotating] = useState(false);
@@ -48,15 +44,28 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
   const raycasterRef = useRef(new THREE.Raycaster());
   const mouseRef = useRef(new THREE.Vector2());
 
-  // Automotive Standard Materials for CAD Showroom
-  // Unselected Panel: Clean neutral technical CAD titanium slate
-  const defaultPanelMatRef = useRef(
+  // Automotive basic materials for authentic GLB model
+  const chromeMatRef = useRef(
     new THREE.MeshStandardMaterial({
-      color: 0x475569,
-      roughness: 0.38,
-      metalness: 0.25,
-      emissive: 0x000000,
-      emissiveIntensity: 0,
+      color: 0xf1f5f9,
+      roughness: 0.12,
+      metalness: 0.95,
+    })
+  );
+
+  const glossBlackMatRef = useRef(
+    new THREE.MeshStandardMaterial({
+      color: 0x090d16,
+      roughness: 0.20,
+      metalness: 0.70,
+    })
+  );
+
+  const tintedGlassMatRef = useRef(
+    new THREE.MeshStandardMaterial({
+      color: 0x07090e,
+      roughness: 0.06,
+      metalness: 0.85,
     })
   );
 
@@ -73,18 +82,18 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
         if (isSelected) {
           // PPF Protected Panel: High-contrast vibrant crimson shield with glossy clearcoat or stealth satin
           mat.color.setHex(ppfFinish === 'GLOSS' ? 0xe11d48 : 0xbe123c);
-          mat.roughness = ppfFinish === 'GLOSS' ? 0.08 : 0.60;
+          mat.roughness = ppfFinish === 'GLOSS' ? 0.08 : 0.58;
           mat.metalness = ppfFinish === 'GLOSS' ? 0.35 : 0.15;
           mat.emissive.setHex(isHovered ? 0xf43f5e : 0x9f1239);
           mat.emissiveIntensity = isHovered ? 0.55 : 0.35;
 
           if (edgeLine && edgeLine.material) {
-            (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0xfecdd3); // Bright luminous edge
+            (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0xfecdd3); // Bright glowing edge
           }
         } else if (isHovered) {
           // Hovered Unselected Panel: Electric technical cyan highlight for instant feedback
           mat.color.setHex(0x0284c7);
-          mat.roughness = 0.18;
+          mat.roughness = 0.20;
           mat.metalness = 0.40;
           mat.emissive.setHex(0x0284c7);
           mat.emissiveIntensity = 0.45;
@@ -93,15 +102,15 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0x38bdf8); // Glowing cyan border
           }
         } else {
-          // Default Unselected Panel: Neutral CAD titanium slate with crisp shutline
-          mat.color.setHex(0x475569);
-          mat.roughness = 0.38;
-          mat.metalness = 0.25;
+          // Default Unselected Panel: Basic clean technical titanium CAD slate
+          mat.color.setHex(0x505b6b);
+          mat.roughness = 0.42;
+          mat.metalness = 0.28;
           mat.emissive.setHex(0x000000);
           mat.emissiveIntensity = 0;
 
           if (edgeLine && edgeLine.material) {
-            (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0x0f172a); // Deep dark shutline
+            (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0x090d16); // Deep dark shutline
           }
         }
       });
@@ -112,106 +121,220 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
     updateMaterials();
   }, [updateMaterials]);
 
-  // Load CAD or GLB vehicle model into scene
-  const loadModel = useCallback((mode: ModelViewMode) => {
-    const scene = sceneRef.current;
-    if (!scene) return;
+  // Splits GLTF car paint mesh into clean discrete panels without cutting polygons
+  const splitGLTFCarPaintIntoPanels = useCallback((paintMesh: THREE.Mesh): THREE.Group => {
+    const panelGroup = new THREE.Group();
+    panelGroup.name = 'GLTF_SplitPanels';
 
-    // Clear previous model & registrations
-    if (carModelRef.current) {
-      scene.remove(carModelRef.current);
-      carModelRef.current = null;
-    }
-    panelRegistrationsRef.current.clear();
-    setLoadError(null);
+    const geom = paintMesh.geometry;
+    const posAttr = geom.attributes.position;
+    const normAttr = geom.attributes.normal;
+    const uvAttr = geom.attributes.uv;
+    const index = geom.index;
 
-    if (mode === 'CAD') {
-      // 100% discrete procedural CAD model with exact sheet metal shutlines
-      setIsLoading(false);
-      const cadCar = buildTechnicalCADVehicle((reg: PanelRegistration) => {
-        if (!panelRegistrationsRef.current.has(reg.panelId)) {
-          panelRegistrationsRef.current.set(reg.panelId, []);
+    const triCount = index ? index.count / 3 : posAttr.count / 3;
+
+    // 1. Build disjoint-set (union-find) of triangles sharing edges
+    const parent = new Int32Array(triCount);
+    for (let i = 0; i < triCount; i++) parent[i] = i;
+
+    const find = (i: number): number => {
+      let curr = i;
+      while (parent[curr] !== curr) {
+        parent[curr] = parent[parent[curr]];
+        curr = parent[curr];
+      }
+      return curr;
+    };
+
+    const union = (i: number, j: number) => {
+      const rI = find(i);
+      const rJ = find(j);
+      if (rI !== rJ) parent[rI] = rJ;
+    };
+
+    const edgeMap = new Map<string, number>();
+    for (let t = 0; t < triCount; t++) {
+      const i0 = index ? index.getX(t * 3) : t * 3;
+      const i1 = index ? index.getX(t * 3 + 1) : t * 3 + 1;
+      const i2 = index ? index.getX(t * 3 + 2) : t * 3 + 2;
+
+      const edges: [number, number][] = [
+        [Math.min(i0, i1), Math.max(i0, i1)],
+        [Math.min(i1, i2), Math.max(i1, i2)],
+        [Math.min(i2, i0), Math.max(i2, i0)],
+      ];
+
+      for (const [a, b] of edges) {
+        const key = `${a}_${b}`;
+        const prev = edgeMap.get(key);
+        if (prev !== undefined) {
+          union(t, prev);
+        } else {
+          edgeMap.set(key, t);
         }
-        panelRegistrationsRef.current.get(reg.panelId)!.push({
-          mesh: reg.mesh,
-          edgeLine: reg.edgeLine,
-        });
+      }
+    }
+
+    // 2. Group triangles by root component
+    const compMap = new Map<number, number[]>();
+    for (let t = 0; t < triCount; t++) {
+      const root = find(t);
+      if (!compMap.has(root)) compMap.set(root, []);
+      compMap.get(root)!.push(t);
+    }
+
+    // 3. High-precision component classifier based on topological bounds
+    const classifyComponent = (
+      minX: number,
+      maxX: number,
+      minY: number,
+      maxY: number,
+      minZ: number,
+      maxZ: number,
+      cx: number,
+      cy: number,
+      cz: number
+    ): string => {
+      // Rear spoiler / Clubsport wing
+      if (cz < -1.45 && cy > 1.15 && Math.abs(cx) < 0.60) return 'rear_spoiler';
+      // Roof panel
+      if (cz > -1.55 && cz < -0.50 && cy > 1.18 && Math.abs(cx) < 0.60) return 'roof';
+      // Trunk / Hatch / Portón Trasero
+      if (cz < -1.65 && cy > 0.45 && Math.abs(cx) < 0.72) return 'trunk';
+      // Rear bumper
+      if (cz < -1.45 && cy < 0.68) return 'bumper_rear';
+      // Hood (Capot)
+      if (cz > 0.90 && cy > 0.52 && Math.abs(cx) < 0.78) return 'hood';
+      // Front bumper
+      if (cz > 1.40 && cy < 0.58) return 'bumper_front';
+      // Front fenders
+      if (cz >= 0.80 && cz <= 1.80 && cy >= 0.10 && minZ > 0.75) {
+        return cx < 0 ? 'fender_left' : 'fender_right';
+      }
+      // Rear Quarters & side body frame
+      if (minZ < -1.0) {
+        return cx < 0 ? 'quarter_left' : 'quarter_right';
+      }
+      // Front Doors
+      if (maxY < 0.88 && minZ >= -0.55 && maxZ <= 0.95) {
+        return cx < 0 ? 'door_front_left' : 'door_front_right';
+      }
+      return cz > 0 ? 'bumper_front' : 'bumper_rear';
+    };
+
+    // 4. Map triangles to panel IDs
+    const panelTriangles = new Map<string, number[]>();
+
+    compMap.forEach((tris) => {
+      let minX = 999, maxX = -999;
+      let minY = 999, maxY = -999;
+      let minZ = 999, maxZ = -999;
+
+      for (const t of tris) {
+        for (let v = 0; v < 3; v++) {
+          const vi = index ? index.getX(t * 3 + v) : t * 3 + v;
+          const x = posAttr.getX(vi);
+          const y = posAttr.getY(vi);
+          const z = posAttr.getZ(vi);
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+          if (z < minZ) minZ = z;
+          if (z > maxZ) maxZ = z;
+        }
+      }
+
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      const cz = (minZ + maxZ) / 2;
+
+      const panelId = classifyComponent(minX, maxX, minY, maxY, minZ, maxZ, cx, cy, cz);
+
+      if (!panelTriangles.has(panelId)) {
+        panelTriangles.set(panelId, []);
+      }
+      const arr = panelTriangles.get(panelId)!;
+      for (const t of tris) {
+        arr.push(t);
+      }
+    });
+
+    // 5. Construct discrete BufferGeometry and Mesh for each panel
+    panelTriangles.forEach((tris, panelId) => {
+      const pCount = tris.length;
+      const newPos = new Float32Array(pCount * 9);
+      const newNorm = normAttr ? new Float32Array(pCount * 9) : null;
+      const newUV = uvAttr ? new Float32Array(pCount * 6) : null;
+
+      for (let dt = 0; dt < pCount; dt++) {
+        const t = tris[dt];
+        const i0 = index ? index.getX(t * 3) : t * 3;
+        const i1 = index ? index.getX(t * 3 + 1) : t * 3 + 1;
+        const i2 = index ? index.getX(t * 3 + 2) : t * 3 + 2;
+        const vertIndices = [i0, i1, i2];
+
+        for (let v = 0; v < 3; v++) {
+          const vi = vertIndices[v];
+          newPos[(dt * 3 + v) * 3] = posAttr.getX(vi);
+          newPos[(dt * 3 + v) * 3 + 1] = posAttr.getY(vi);
+          newPos[(dt * 3 + v) * 3 + 2] = posAttr.getZ(vi);
+
+          if (normAttr && newNorm) {
+            newNorm[(dt * 3 + v) * 3] = normAttr.getX(vi);
+            newNorm[(dt * 3 + v) * 3 + 1] = normAttr.getY(vi);
+            newNorm[(dt * 3 + v) * 3 + 2] = normAttr.getZ(vi);
+          }
+
+          if (uvAttr && newUV) {
+            newUV[(dt * 3 + v) * 2] = uvAttr.getX(vi);
+            newUV[(dt * 3 + v) * 2 + 1] = uvAttr.getY(vi);
+          }
+        }
+      }
+
+      const pGeom = new THREE.BufferGeometry();
+      pGeom.setAttribute('position', new THREE.BufferAttribute(newPos, 3));
+      if (newNorm) pGeom.setAttribute('normal', new THREE.BufferAttribute(newNorm, 3));
+      else pGeom.computeVertexNormals();
+      if (newUV) pGeom.setAttribute('uv', new THREE.BufferAttribute(newUV, 2));
+
+      // Basic, clean technical titanium body material (CAD clay finish)
+      const panelMat = new THREE.MeshStandardMaterial({
+        color: 0x556272,
+        roughness: 0.45,
+        metalness: 0.20,
       });
 
-      // Position CAD car centered on turntable
-      cadCar.position.set(0, 0, 0);
-      carModelRef.current = cadCar;
-      scene.add(cadCar);
-      updateMaterials();
-    } else {
-      // External GLB Showroom model
-      setIsLoading(true);
-      const loader = new GLTFLoader();
+      const pMesh = new THREE.Mesh(pGeom, panelMat);
+      pMesh.name = `panel_${panelId}`;
+      pMesh.userData = { panelId, isPanel: true };
+      pMesh.castShadow = true;
+      pMesh.receiveShadow = true;
 
-      loader.load(
-        vehicleModelPath,
-        (gltf) => {
-          const car = gltf.scene;
-          carModelRef.current = car;
-
-          // Scale and center GLB
-          const rawBox = new THREE.Box3().setFromObject(car);
-          const rawSize = rawBox.getSize(new THREE.Vector3());
-          const maxDim = Math.max(rawSize.x, rawSize.y, rawSize.z);
-          if (maxDim > 8 || maxDim < 1.0) {
-            car.scale.multiplyScalar(4.26 / maxDim);
-          }
-          const scaledBox = new THREE.Box3().setFromObject(car);
-          const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
-          car.position.x -= scaledCenter.x;
-          car.position.y -= scaledBox.min.y;
-          car.position.z -= scaledCenter.z;
-
-          // Traverse meshes and register paint panels
-          car.traverse((child) => {
-            if ((child as THREE.Mesh).isMesh) {
-              const mesh = child as THREE.Mesh;
-              mesh.castShadow = true;
-              mesh.receiveShadow = true;
-              const name = (mesh.name || '').toLowerCase();
-
-              // Simple panel attribution for GLB fallback
-              let panelId = 'hood';
-              if (name.includes('bumper_f') || name.includes('front_bumper')) panelId = 'bumper_front';
-              else if (name.includes('bumper_r') || name.includes('rear_bumper')) panelId = 'bumper_rear';
-              else if (name.includes('roof')) panelId = 'roof';
-              else if (name.includes('door_l')) panelId = 'door_front_left';
-              else if (name.includes('door_r')) panelId = 'door_front_right';
-              else if (name.includes('fender_l')) panelId = 'fender_left';
-              else if (name.includes('fender_r')) panelId = 'fender_right';
-              else if (name.includes('trunk') || name.includes('tailgate')) panelId = 'trunk';
-
-              mesh.userData = { panelId, isPanel: true };
-              if (!panelRegistrationsRef.current.has(panelId)) {
-                panelRegistrationsRef.current.set(panelId, []);
-              }
-              panelRegistrationsRef.current.get(panelId)!.push({ mesh });
-            }
-          });
-
-          scene.add(car);
-          setIsLoading(false);
-          updateMaterials();
-        },
-        (xhr) => {
-          if (xhr.total > 0) setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
-        },
-        (err) => {
-          console.error('Error loading GLB:', err);
-          setLoadError('No se pudo cargar el archivo GLB. Cambiando a vista CAD.');
-          setModelMode('CAD');
-          setIsLoading(false);
-        }
+      // Crisp shutline border outline
+      const edgesGeo = new THREE.EdgesGeometry(pGeom, 25);
+      const edges = new THREE.LineSegments(
+        edgesGeo,
+        new THREE.LineBasicMaterial({ color: 0x090d16, linewidth: 1.5 })
       );
-    }
-  }, [vehicleModelPath, updateMaterials]);
+      edges.name = `edge_${panelId}`;
+      edges.raycast = () => {}; // Avoid intercepting raycast directly
+      pMesh.add(edges);
 
-  // Main Three.js Scene Setup
+      panelGroup.add(pMesh);
+
+      if (!panelRegistrationsRef.current.has(panelId)) {
+        panelRegistrationsRef.current.set(panelId, []);
+      }
+      panelRegistrationsRef.current.get(panelId)!.push({ mesh: pMesh, edgeLine: edges });
+    });
+
+    return panelGroup;
+  }, []);
+
+  // Main Three.js Scene Setup & Model Loading
   useEffect(() => {
     const container = mountRef.current;
     if (!container) return;
@@ -223,7 +346,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
 
     // 2. Camera
     const camera = new THREE.PerspectiveCamera(38, container.clientWidth / container.clientHeight, 0.1, 100);
-    camera.position.set(4.2, 2.3, 4.4);
+    camera.position.set(3.9, 1.9, 3.9);
     cameraRef.current = camera;
 
     // 3. Renderer
@@ -241,40 +364,39 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.target.set(0, 0.72, 0);
+    controls.target.set(0, 0.62, 0); // Visual center of car
     controls.maxPolarAngle = Math.PI / 2 - 0.02; // Never clip under floor
     controls.minDistance = 2.0;
     controls.maxDistance = 9.5;
     controlsRef.current = controls;
 
-    // 5. High-Clarity Neutral Technical Studio Lighting
-    // Clean, balanced white lights so all sheet metal shutlines are 100% visible
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    // 5. Balanced Neutral White Technical Studio Lighting (NO ECCENTRIC COLORS)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
     scene.add(ambientLight);
 
-    const keySpot = new THREE.SpotLight(0xffffff, 2.2);
-    keySpot.position.set(5.5, 7.5, 5.5);
+    const keySpot = new THREE.SpotLight(0xffffff, 1.8);
+    keySpot.position.set(5.0, 7.0, 5.0);
     keySpot.angle = Math.PI / 4;
-    keySpot.penumbra = 0.7;
+    keySpot.penumbra = 0.6;
     keySpot.castShadow = true;
     keySpot.shadow.mapSize.width = 2048;
     keySpot.shadow.mapSize.height = 2048;
     scene.add(keySpot);
 
-    const fillLight1 = new THREE.DirectionalLight(0xffffff, 1.2);
-    fillLight1.position.set(-6, 4.5, -5);
+    const fillLight1 = new THREE.DirectionalLight(0xffffff, 1.1);
+    fillLight1.position.set(-5, 4.5, -4);
     scene.add(fillLight1);
 
-    const fillLight2 = new THREE.DirectionalLight(0xffffff, 1.0);
-    fillLight2.position.set(0, 6, -6);
+    const fillLight2 = new THREE.DirectionalLight(0xffffff, 0.9);
+    fillLight2.position.set(0, 5, -5);
     scene.add(fillLight2);
 
     const frontFill = new THREE.DirectionalLight(0xffffff, 0.9);
-    frontFill.position.set(0, 3, 6);
+    frontFill.position.set(0, 3, 5);
     scene.add(frontFill);
 
     // 6. Technical Circular Turntable Floor
-    const floorGeo = new THREE.CylinderGeometry(5.2, 5.2, 0.06, 64);
+    const floorGeo = new THREE.CylinderGeometry(3.6, 3.6, 0.06, 64);
     const floorMat = new THREE.MeshStandardMaterial({
       color: 0x0a0d14,
       roughness: 0.45,
@@ -286,15 +408,132 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
     scene.add(floorMesh);
 
     // Subtle radial concentric ring marker on floor
-    const ringGeo = new THREE.RingGeometry(3.6, 3.63, 64);
+    const ringGeo = new THREE.RingGeometry(2.7, 2.73, 64);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0x1e293b, side: THREE.DoubleSide });
     const ringMesh = new THREE.Mesh(ringGeo, ringMat);
     ringMesh.rotation.x = -Math.PI / 2;
     ringMesh.position.y = 0.002;
     scene.add(ringMesh);
 
-    // Initial model load
-    loadModel(modelMode);
+    // Load authentic Golf GTI Clubsport GLB Model
+    setIsLoading(true);
+    setLoadError(null);
+    panelRegistrationsRef.current.clear();
+
+    const loader = new GLTFLoader();
+    loader.load(
+      vehicleModelPath,
+      (gltf) => {
+        const car = gltf.scene;
+        carModelRef.current = car;
+
+        // Auto-scale model if scaled down by FBX 0.01 factor
+        const rawBox = new THREE.Box3().setFromObject(car);
+        const rawSize = rawBox.getSize(new THREE.Vector3());
+        const maxDim = Math.max(rawSize.x, rawSize.y, rawSize.z);
+        if (maxDim < 1.0) {
+          car.scale.set(100, 100, 100);
+          car.updateMatrixWorld(true);
+        }
+
+        // Center car flush on turntable floor y = 0
+        const realBox = new THREE.Box3().setFromObject(car);
+        const center = realBox.getCenter(new THREE.Vector3());
+        car.position.x -= center.x;
+        car.position.y -= realBox.min.y; // Sit flush on floor y=0
+        car.position.z -= center.z;
+
+        // Process materials and split car paint into clean discrete body panels
+        const paintMeshesToSplit: THREE.Mesh[] = [];
+
+        car.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            const name = (mesh.name || '').toLowerCase();
+
+            // Preserves Chrome Badges
+            if (name.includes('badge') || name.includes('emblem')) {
+              mesh.material = chromeMatRef.current;
+              return;
+            }
+
+            // Preserves Grilles and trims in Gloss Black
+            if (name.includes('grille') || name.includes('chassis') || name.includes('trim')) {
+              mesh.material = glossBlackMatRef.current;
+              return;
+            }
+
+            // Preserves Glass Windows
+            if (name.includes('glass_window') || name.includes('window')) {
+              mesh.material = tintedGlassMatRef.current;
+              return;
+            }
+
+            // Headlight Glass
+            if (name.includes('lightglass') || name.includes('light_max')) {
+              mesh.userData = { panelId: 'headlights', isPanel: true };
+              mesh.material = new THREE.MeshStandardMaterial({
+                color: 0x93c5fd,
+                roughness: 0.10,
+                metalness: 0.85,
+              });
+              if (!panelRegistrationsRef.current.has('headlights')) {
+                panelRegistrationsRef.current.set('headlights', []);
+              }
+              panelRegistrationsRef.current.get('headlights')!.push({ mesh });
+              return;
+            }
+
+            // Side Mirrors
+            if (name.includes('mirror')) {
+              mesh.userData = { panelId: 'mirrors', isPanel: true };
+              mesh.material = new THREE.MeshStandardMaterial({
+                color: 0x556272,
+                roughness: 0.45,
+                metalness: 0.20,
+              });
+              if (!panelRegistrationsRef.current.has('mirrors')) {
+                panelRegistrationsRef.current.set('mirrors', []);
+              }
+              panelRegistrationsRef.current.get('mirrors')!.push({ mesh });
+              return;
+            }
+
+            // Identify Car Paint Body Meshes for clean panel separation
+            if (
+              name.includes('phong2') ||
+              (name.includes('carpaint') && !name.includes('phong3') && !name.includes('trim'))
+            ) {
+              paintMeshesToSplit.push(mesh);
+            } else if (name.includes('phong3')) {
+              // Inner door frames / sills / black shutlines: keep in matte dark graphite
+              mesh.material = glossBlackMatRef.current;
+            }
+          }
+        });
+
+        // Split paint meshes into clean discrete body panels
+        paintMeshesToSplit.forEach((paintMesh) => {
+          const splitGroup = splitGLTFCarPaintIntoPanels(paintMesh);
+          paintMesh.visible = false;
+          paintMesh.parent?.add(splitGroup);
+        });
+
+        scene.add(car);
+        setIsLoading(false);
+        updateMaterials();
+      },
+      (xhr) => {
+        if (xhr.total > 0) setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+      },
+      (err) => {
+        console.error('Error loading GLB:', err);
+        setLoadError('No se pudo cargar el archivo GLB.');
+        setIsLoading(false);
+      }
+    );
 
     // Animation Loop
     let animId: number;
@@ -329,12 +568,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
     };
-  }, [loadModel, modelMode, isRotating]);
-
-  // Reload model when mode changes
-  useEffect(() => {
-    loadModel(modelMode);
-  }, [modelMode, loadModel]);
+  }, [vehicleModelPath, splitGLTFCarPaintIntoPanels, updateMaterials]);
 
   // Raycasting & Mouse Interaction
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -403,24 +637,24 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
 
     switch (view) {
       case 'iso':
-        camera.position.set(4.2, 2.3, 4.4);
-        controls.target.set(0, 0.72, 0);
+        camera.position.set(3.9, 1.9, 3.9);
+        controls.target.set(0, 0.62, 0);
         break;
       case 'front':
-        camera.position.set(0, 0.95, 4.2);
-        controls.target.set(0, 0.72, 0.3);
+        camera.position.set(0, 0.95, 4.1);
+        controls.target.set(0, 0.62, 0.2);
         break;
       case 'side':
-        camera.position.set(4.4, 0.85, -0.05);
-        controls.target.set(0, 0.72, -0.05);
+        camera.position.set(4.2, 0.85, 0);
+        controls.target.set(0, 0.62, 0);
         break;
       case 'rear':
-        camera.position.set(0, 1.05, -4.4);
-        controls.target.set(0, 0.72, -0.3);
+        camera.position.set(0, 0.95, -4.1);
+        controls.target.set(0, 0.62, -0.2);
         break;
       case 'top':
-        camera.position.set(0, 4.8, 0.01);
-        controls.target.set(0, 0.72, 0);
+        camera.position.set(0, 4.6, 0.01);
+        controls.target.set(0, 0.62, 0);
         break;
     }
     controls.update();
@@ -480,7 +714,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             }}
           />
           <div style={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}>
-            Cargando Carrocería 3D ({loadProgress}%)
+            Cargando Carrocería 3D Golf GTI ({loadProgress}%)
           </div>
         </div>
       )}
@@ -501,67 +735,8 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
           zIndex: 5,
         }}
       >
-        {/* Left: View Mode Toggle & Camera Angles */}
+        {/* Left: Camera Angles */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', pointerEvents: 'auto' }}>
-          {/* Mode Switcher: CAD Despiece Técnico vs GLB */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '3px',
-              background: 'rgba(12, 14, 20, 0.90)',
-              padding: '3px',
-              borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setModelMode('CAD')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '5px 11px',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: 700,
-                color: modelMode === 'CAD' ? '#ffffff' : '#8893a4',
-                background: modelMode === 'CAD' ? 'var(--accent-red)' : 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              title="Geometría CAD con líneas de chapa 100% exactas y separadas"
-            >
-              <LayoutGrid style={{ width: 13, height: 13 }} />
-              Despiece CAD (Líneas Exactas)
-            </button>
-            <button
-              type="button"
-              onClick={() => setModelMode('GLB')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '5px 11px',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: 700,
-                color: modelMode === 'GLB' ? '#ffffff' : '#8893a4',
-                background: modelMode === 'GLB' ? '#334155' : 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              title="Modelo GLB completo para visualización exterior general"
-            >
-              <Eye style={{ width: 13, height: 13 }} />
-              Showroom GLB
-            </button>
-          </div>
-
-          {/* Camera Angles */}
           <div
             style={{
               display: 'flex',
@@ -579,7 +754,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
                 type="button"
                 onClick={() => setCameraAngle(view)}
                 style={{
-                  padding: '4px 9px',
+                  padding: '4px 10px',
                   borderRadius: '5px',
                   fontSize: '11px',
                   fontWeight: activeCameraAngle === view ? 700 : 500,
@@ -701,7 +876,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
                 fontWeight: 700,
               }}
             >
-              PANEL CAD DETECTADO
+              PANEL DETECTADO
             </span>
             <span
               style={{

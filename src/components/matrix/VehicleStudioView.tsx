@@ -57,12 +57,11 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
   // Selected Panels & Hover
   const [selectedPanelIds, setSelectedPanelIds] = useState<string[]>([
     'hood',
-    'front_bumper',
+    'bumper_front',
     'fender_left',
     'fender_right',
     'mirrors',
     'headlights',
-    'fog_lights',
   ]);
   const [hoveredPanelId, setHoveredPanelId] = useState<string | null>(null);
 
