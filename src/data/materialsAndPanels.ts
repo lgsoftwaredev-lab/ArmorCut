@@ -21,7 +21,7 @@ export const VEHICLE_CATALOG: Record<string, VehicleProfile> = {
     lengthMeters: 4.26,
     widthMeters: 1.79,
     scaleFactor: 0.92,
-    model3dPath: '/models/2016_volkswagen_golf_gti_clubsport_mk7.glb',
+    model3dPath: '/models/golf_gti_mk7.glb',
     features: [
       'Parrilla panal de abeja con filete rojo distintivo GTI',
       'Faros antiniebla horizontales integrados en branquias frontales',

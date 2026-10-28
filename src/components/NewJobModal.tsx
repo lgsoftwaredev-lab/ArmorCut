@@ -5,12 +5,20 @@ import { PPFRoll, CreateJobInput } from '@/types/ppf';
 import { Scissors, X, Check, Plus } from 'lucide-react';
 import { PlusCarsMonogram } from '@/components/brand/PlusCarsBrand';
 
+export interface InitialJobData {
+  vehicle?: string;
+  parts?: string[];
+  metersUsed?: number;
+  notes?: string;
+}
+
 interface NewJobModalProps {
   isOpen: boolean;
   onClose: () => void;
   rolls: PPFRoll[];
   preselectedRoll?: PPFRoll | null;
   onSaveJob: (jobData: CreateJobInput) => Promise<void>;
+  initialJobData?: InitialJobData | null;
 }
 
 const COMMON_PARTS = [
@@ -30,23 +38,28 @@ const COMMON_PARTS = [
 const JobModalContent: React.FC<{
   rolls: PPFRoll[];
   preselectedRoll?: PPFRoll | null;
+  initialJobData?: InitialJobData | null;
   onClose: () => void;
   onSaveJob: (jobData: CreateJobInput) => Promise<void>;
-}> = ({ rolls, preselectedRoll, onClose, onSaveJob }) => {
+}> = ({ rolls, preselectedRoll, initialJobData, onClose, onSaveJob }) => {
   const activeRolls = rolls.filter((r) => r.status === 'ACTIVE' || r.id === preselectedRoll?.id);
 
   const [selectedRollId, setSelectedRollId] = useState(
     () => preselectedRoll?.id || (activeRolls.length > 0 ? activeRolls[0].id : '')
   );
-  const [vehicle, setVehicle] = useState('');
+  const [vehicle, setVehicle] = useState(initialJobData?.vehicle || '');
   const [licensePlate, setLicensePlate] = useState('');
   const [clientName, setClientName] = useState('');
   const [workOrderNumber, setWorkOrderNumber] = useState('');
   const [installer, setInstaller] = useState('Lucas');
-  const [selectedParts, setSelectedParts] = useState<string[]>(['Capot Completo']);
+  const [selectedParts, setSelectedParts] = useState<string[]>(
+    initialJobData?.parts && initialJobData.parts.length > 0
+      ? initialJobData.parts
+      : ['Capot Completo']
+  );
   const [customPart, setCustomPart] = useState('');
-  const [metersUsed, setMetersUsed] = useState(2.2);
-  const [notes, setNotes] = useState('');
+  const [metersUsed, setMetersUsed] = useState(initialJobData?.metersUsed || 2.2);
+  const [notes, setNotes] = useState(initialJobData?.notes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentRoll = rolls.find((r) => r.id === selectedRollId) || activeRolls[0];
@@ -440,13 +453,15 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
   rolls,
   preselectedRoll,
   onSaveJob,
+  initialJobData,
 }) => {
   if (!isOpen) return null;
   return (
     <JobModalContent
-      key={preselectedRoll?.id || 'new-job-modal'}
+      key={preselectedRoll?.id || initialJobData?.vehicle || 'new-job-modal'}
       rolls={rolls}
       preselectedRoll={preselectedRoll}
+      initialJobData={initialJobData}
       onClose={onClose}
       onSaveJob={onSaveJob}
     />

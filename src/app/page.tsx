@@ -11,9 +11,10 @@ import { StockService } from '@/lib/stockService';
 import { Header } from '@/components/Header';
 import { RollCard } from '@/components/RollCard';
 import { NewRollModal } from '@/components/NewRollModal';
-import { NewJobModal } from '@/components/NewJobModal';
+import { NewJobModal, InitialJobData } from '@/components/NewJobModal';
 import { JobsHistoryView } from '@/components/JobsHistoryView';
 import { MetricsView } from '@/components/MetricsView';
+import { VehicleStudioView } from '@/components/matrix/VehicleStudioView';
 import { PlusCarsLogo, PlusCarsMonogram } from '@/components/brand/PlusCarsBrand';
 import { 
   Layers, 
@@ -22,11 +23,12 @@ import {
   Search, 
   Plus, 
   RotateCcw,
-  AlertCircle
+  AlertCircle,
+  Box
 } from 'lucide-react';
 
 export default function ArmorCutDashboard() {
-  const [activeTab, setActiveTab] = useState<'ROLLS' | 'JOBS' | 'METRICS'>('ROLLS');
+  const [activeTab, setActiveTab] = useState<'ROLLS' | 'JOBS' | 'METRICS' | 'STUDIO'>('ROLLS');
 
   // Core Data State
   const [rolls, setRolls] = useState<PPFRoll[]>([]);
@@ -44,6 +46,7 @@ export default function ArmorCutDashboard() {
 
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
   const [preselectedRoll, setPreselectedRoll] = useState<PPFRoll | null>(null);
+  const [initialJobData, setInitialJobData] = useState<InitialJobData | null>(null);
 
   // Load Data
   const loadData = async () => {
@@ -208,6 +211,28 @@ export default function ArmorCutDashboard() {
               <TrendingUp size={17} />
               <span>Métricas & Reportes</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('STUDIO')}
+              className="nav-tab-btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                borderRadius: 'var(--radius-md)',
+                border: activeTab === 'STUDIO' ? '1px solid var(--accent-red)' : '1px solid transparent',
+                background: activeTab === 'STUDIO' ? 'rgba(230, 25, 55, 0.15)' : 'transparent',
+                color: activeTab === 'STUDIO' ? 'var(--accent-red)' : 'var(--text-secondary)',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                cursor: 'pointer',
+                transition: 'all var(--transition-fast)',
+              }}
+            >
+              <Box size={17} />
+              <span>Estudio 3D / CAD</span>
+            </button>
           </div>
 
           {/* Quick Refresh */}
@@ -366,6 +391,18 @@ export default function ArmorCutDashboard() {
         {activeTab === 'METRICS' && (
           <MetricsView stats={stats} />
         )}
+
+        {/* Tab 4: 3D SHOWROOM & CAD STUDIO */}
+        {activeTab === 'STUDIO' && (
+          <VehicleStudioView
+            rolls={rolls}
+            onOpenNewJobWithData={(data) => {
+              setInitialJobData(data);
+              setPreselectedRoll(null);
+              setIsNewJobModalOpen(true);
+            }}
+          />
+        )}
       </main>
 
       {/* Footer */}
@@ -408,9 +445,13 @@ export default function ArmorCutDashboard() {
 
       <NewJobModal
         isOpen={isNewJobModalOpen}
-        onClose={() => setIsNewJobModalOpen(false)}
+        onClose={() => {
+          setIsNewJobModalOpen(false);
+          setInitialJobData(null);
+        }}
         rolls={rolls}
         preselectedRoll={preselectedRoll}
+        initialJobData={initialJobData}
         onSaveJob={handleSaveJob}
       />
     </div>
