@@ -47,6 +47,42 @@ export const VEHICLE_CATALOG: Record<string, VehicleProfile> = {
       'Portón trasero vertical con spoiler aerodinámico integrado',
     ],
   },
+  bmw_m2_f87: {
+    id: 'bmw_m2_f87',
+    name: 'BMW M2 Competition (F87)',
+    brand: 'BMW',
+    year: 2020,
+    badge: 'M Power Long Beach Blue',
+    category: 'COUPE_SUPERCAR',
+    lengthMeters: 4.46,
+    widthMeters: 1.85,
+    scaleFactor: 0.95,
+    model3dPath: '/models/bmw_m2.glb',
+    features: [
+      'Pintura icónica Long Beach Blue con splitter aerodinámico frontal M',
+      'Capot M de aluminio de alta curvatura con nervaduras de tensión',
+      'Guardabarros ensanchados de competición y retrovisores de doble brazo',
+      'Difusor trasero con 4 salidas de escape deportivas cromadas M',
+    ],
+  },
+  bmw_m2_g87: {
+    id: 'bmw_m2_g87',
+    name: 'BMW M2 Coupé (G87)',
+    brand: 'BMW',
+    year: 2023,
+    badge: 'Next-Gen M Twin-Turbo',
+    category: 'COUPE_SUPERCAR',
+    lengthMeters: 4.58,
+    widthMeters: 1.88,
+    scaleFactor: 0.98,
+    model3dPath: '/models/bmw_m2_g87.glb',
+    features: [
+      'Pintura Toronto Red Metallic con diseño geométrico M de vanguardia',
+      'Techo de fibra de carbono expuesta ultraligero con canal central',
+      'Trompa agresiva con riñones M horizontales sin marco',
+      'Pasos de rueda cuadriformes y alerón tipo ducktail integrado',
+    ],
+  },
 };
 
 /* ==============================================================================

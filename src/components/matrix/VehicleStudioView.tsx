@@ -220,6 +220,9 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
               >
                 {v.id === 'golf_gti_mk7' && '🏎️ Golf GTI MK7'}
                 {v.id === 'toyota_sw4' && '🚙 Toyota SW4 (Fortuner)'}
+                {v.id === 'bmw_m2_f87' && '⚡ BMW M2 (F87)'}
+                {v.id === 'bmw_m2_g87' && '🔥 BMW M2 Coupé (G87)'}
+                {!['golf_gti_mk7', 'toyota_sw4', 'bmw_m2_f87', 'bmw_m2_g87'].includes(v.id) && `🚘 ${v.name}`}
               </button>
             );
           })}

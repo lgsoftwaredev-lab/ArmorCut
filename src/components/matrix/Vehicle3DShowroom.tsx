@@ -102,15 +102,30 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0x38bdf8); // Glowing cyan border
           }
         } else {
-          // Default Unselected Panel: Basic clean technical titanium CAD slate
-          mat.color.setHex(0x505b6b);
-          mat.roughness = 0.42;
-          mat.metalness = 0.28;
-          mat.emissive.setHex(0x000000);
-          mat.emissiveIntensity = 0;
+          // Default Unselected Panel: 100% Original Factory Paint & Finish!
+          const orig = mesh.userData.originalMaterial as THREE.MeshStandardMaterial;
+          if (orig && orig.color) {
+            mat.color.copy(orig.color);
+            mat.roughness = orig.roughness ?? 0.15;
+            mat.metalness = orig.metalness ?? 0.35;
+            if (orig.map) mat.map = orig.map;
+            if (orig.normalMap) mat.normalMap = orig.normalMap;
+            mat.emissive.setHex(0x000000);
+            mat.emissiveIntensity = 0;
+            mat.needsUpdate = true;
+          } else if (mesh.userData.originalColor) {
+            mat.color.copy(mesh.userData.originalColor);
+            mat.roughness = mesh.userData.originalRoughness ?? 0.15;
+            mat.metalness = mesh.userData.originalMetalness ?? 0.35;
+            mat.emissive.setHex(0x000000);
+            mat.emissiveIntensity = 0;
+            mat.needsUpdate = true;
+          }
 
           if (edgeLine && edgeLine.material) {
-            (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0x090d16); // Deep dark shutline
+            (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0x090d16);
+            (edgeLine.material as THREE.LineBasicMaterial).opacity = 0.35;
+            edgeLine.visible = true;
           }
         }
       });
@@ -184,18 +199,26 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       compMap.get(root)!.push(t);
     }
 
-    // Detect coordinate orientation (SW4 has length along X, Golf GTI has length along Z)
+    // Detect coordinate orientation (SW4 along X, BMW M2 F87 along Y, Golf GTI & G87 along Z)
     let minCoordX = 999, maxCoordX = -999;
+    let minCoordY = 999, maxCoordY = -999;
     let minCoordZ = 999, maxCoordZ = -999;
     for (let i = 0; i < posAttr.count; i++) {
       const x = posAttr.getX(i);
+      const y = posAttr.getY(i);
       const z = posAttr.getZ(i);
       if (x < minCoordX) minCoordX = x;
       if (x > maxCoordX) maxCoordX = x;
+      if (y < minCoordY) minCoordY = y;
+      if (y > maxCoordY) maxCoordY = y;
       if (z < minCoordZ) minCoordZ = z;
       if (z > maxCoordZ) maxCoordZ = z;
     }
-    const isXAxisLongitudinal = (maxCoordX - minCoordX) > (maxCoordZ - minCoordZ);
+    const dimX = maxCoordX - minCoordX;
+    const dimY = maxCoordY - minCoordY;
+    const dimZ = maxCoordZ - minCoordZ;
+    const isXAxisLongitudinal = dimX > dimY && dimX > dimZ;
+    const isYAxisLongitudinal = dimY > dimX && dimY > dimZ;
 
     // 3. High-precision component classifier based on topological bounds
     const classifyComponent = (
@@ -209,26 +232,30 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       cy: number,
       cz: number
     ): string => {
+      // 1. Toyota SW4 (Longitudinal X)
       if (isXAxisLongitudinal) {
-        // SW4 Orientation: X = length (0 to 4.8), Y = width (-0.92 to +0.92, cy < 0 is Left, cy > 0 is Right), Z = height
-        // Hood (Capot)
         if (cx >= 0.05 && cx <= 1.40 && cz > 1.50 && Math.abs(cy) < 0.85) return 'hood';
-        // Front Bumper
         if (cx < 0.65 && cz < 1.50) return 'bumper_front';
-        // Front Fenders
         if (cx >= 0.40 && cx <= 1.70 && Math.abs(cy) > 0.65) {
           return cy < 0 ? 'fender_left' : 'fender_right';
         }
-        // Rear Quarters / side body frame
         if (cx >= 1.35 && cx <= 3.80) {
           return cy < 0 ? 'quarter_left' : 'quarter_right';
         }
-        // Rear Bumper
         if (cx > 3.80) return 'bumper_rear';
         return cx > 2.0 ? 'bumper_rear' : 'bumper_front';
       }
 
-      // Golf GTI Orientation: Z = length (-2.1 to +2.1), X = width (-0.9 to +0.9), Y = height
+      // 2. BMW M2 F87 (Longitudinal Y)
+      if (isYAxisLongitudinal) {
+        if (cz > 1.25 && Math.abs(cx) < 0.60) return 'roof';
+        if (cz < 0.40) return 'rocker_panels';
+        if (cx > 0.35) return 'quarter_left';
+        if (cx < -0.35) return 'quarter_right';
+        return cy > 0 ? 'quarter_left' : 'quarter_right';
+      }
+
+      // 3. Golf GTI MK7 / BMW M2 G87 (Longitudinal Z)
       // Rear spoiler / Clubsport wing
       if (cz < -1.45 && cy > 1.15 && Math.abs(cx) < 0.60) return 'rear_spoiler';
       // Roof panel
@@ -238,19 +265,19 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       // Rear bumper
       if (cz < -1.45 && cy < 0.68) return 'bumper_rear';
       // Hood (Capot)
-      if (cz > 0.90 && cy > 0.52 && Math.abs(cx) < 0.78) return 'hood';
+      if (cz > 0.70 && cy > 0.48 && Math.abs(cx) < 0.85) return 'hood';
       // Front bumper
-      if (cz > 1.40 && cy < 0.58) return 'bumper_front';
+      if (cz > 1.40 && cy < 0.65) return 'bumper_front';
       // Front fenders
-      if (cz >= 0.80 && cz <= 1.80 && cy >= 0.10 && minZ > 0.75) {
+      if (cz >= 0.60 && cz <= 1.80 && cy >= 0.10 && minZ > 0.55) {
         return cx < 0 ? 'fender_left' : 'fender_right';
       }
       // Rear Quarters & side body frame
-      if (minZ < -1.0) {
+      if (minZ < -0.6) {
         return cx < 0 ? 'quarter_left' : 'quarter_right';
       }
       // Front Doors
-      if (maxY < 0.88 && minZ >= -0.55 && maxZ <= 0.95) {
+      if (maxY < 0.98 && minZ >= -0.65 && maxZ <= 0.95) {
         return cx < 0 ? 'door_front_left' : 'door_front_right';
       }
       return cz > 0 ? 'bumper_front' : 'bumper_rear';
@@ -333,24 +360,28 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       else pGeom.computeVertexNormals();
       if (newUV) pGeom.setAttribute('uv', new THREE.BufferAttribute(newUV, 2));
 
-      // Basic, clean technical titanium body material (CAD clay finish)
-      const panelMat = new THREE.MeshStandardMaterial({
-        color: 0x556272,
-        roughness: 0.45,
-        metalness: 0.20,
-      });
+      // Clone authentic factory car paint material
+      const sourceMat = paintMesh.material as THREE.MeshStandardMaterial;
+      const panelMat = sourceMat ? sourceMat.clone() : new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.3 });
 
       const pMesh = new THREE.Mesh(pGeom, panelMat);
       pMesh.name = `panel_${panelId}`;
-      pMesh.userData = { panelId, isPanel: true };
+      pMesh.userData = {
+        panelId,
+        isPanel: true,
+        originalMaterial: sourceMat,
+        originalColor: sourceMat && sourceMat.color ? sourceMat.color.clone() : new THREE.Color(0xffffff),
+        originalRoughness: sourceMat?.roughness ?? 0.15,
+        originalMetalness: sourceMat?.metalness ?? 0.35,
+      };
       pMesh.castShadow = true;
       pMesh.receiveShadow = true;
 
-      // Crisp shutline border outline
+      // Crisp subtle shutline border outline
       const edgesGeo = new THREE.EdgesGeometry(pGeom, 25);
       const edges = new THREE.LineSegments(
         edgesGeo,
-        new THREE.LineBasicMaterial({ color: 0x090d16, linewidth: 1.5 })
+        new THREE.LineBasicMaterial({ color: 0x090d16, transparent: true, opacity: 0.45, linewidth: 1.2 })
       );
       edges.name = `edge_${panelId}`;
       edges.raycast = () => {}; // Avoid intercepting raycast directly
@@ -479,22 +510,29 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
         // Process materials and split car paint into clean discrete body panels
         const paintMeshesToSplit: THREE.Mesh[] = [];
 
-        // Helper to register individual isolated body panels (SW4 doors, roof, trunk)
+        // Helper to register individual isolated body panels
         const registerPanelMesh = (mesh: THREE.Mesh, panelId: string) => {
-          mesh.userData = { panelId, isPanel: true };
           mesh.castShadow = true;
           mesh.receiveShadow = true;
-          mesh.material = new THREE.MeshStandardMaterial({
-            color: 0x556272,
-            roughness: 0.45,
-            metalness: 0.20,
-          });
+
+          const origMat = mesh.material as THREE.MeshStandardMaterial;
+          const clonedMat = origMat ? origMat.clone() : new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.3 });
+          mesh.material = clonedMat;
+
+          mesh.userData = {
+            panelId,
+            isPanel: true,
+            originalMaterial: origMat,
+            originalColor: origMat && origMat.color ? origMat.color.clone() : new THREE.Color(0xffffff),
+            originalRoughness: origMat?.roughness ?? 0.15,
+            originalMetalness: origMat?.metalness ?? 0.35,
+          };
 
           if (!mesh.getObjectByName(`edge_${panelId}`)) {
-            const edgesGeo = new THREE.EdgesGeometry(mesh.geometry, 25);
+            const edgesGeo = new THREE.EdgesGeometry(mesh.geometry, 28);
             const edges = new THREE.LineSegments(
               edgesGeo,
-              new THREE.LineBasicMaterial({ color: 0x090d16, linewidth: 1.5 })
+              new THREE.LineBasicMaterial({ color: 0x090d16, transparent: true, opacity: 0.45, linewidth: 1.2 })
             );
             edges.name = `edge_${panelId}`;
             edges.raycast = () => {};
@@ -514,60 +552,40 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             mesh.receiveShadow = true;
             const name = (mesh.name || '').toLowerCase();
 
-            // Preserves Chrome Badges
-            if (name.includes('badge') || name.includes('emblem')) {
-              mesh.material = chromeMatRef.current;
+            // 1. BMW M2 F87 (bmw_m2.glb) Isolated Meshes
+            if (name.includes('m2firby_hood')) { registerPanelMesh(mesh, 'hood'); return; }
+            if (name.includes('m2firby_bumper_f')) { registerPanelMesh(mesh, 'bumper_front'); return; }
+            if (name.includes('m2firby_bumper_r')) { registerPanelMesh(mesh, 'bumper_rear'); return; }
+            if (name.includes('m2firby_door_l')) { registerPanelMesh(mesh, 'door_front_left'); return; }
+            if (name.includes('m2firby_door_r')) { registerPanelMesh(mesh, 'door_front_right'); return; }
+            if (name.includes('m2firby_fender_l')) { registerPanelMesh(mesh, 'fender_left'); return; }
+            if (name.includes('m2firby_fender_r')) { registerPanelMesh(mesh, 'fender_right'); return; }
+            if (name.includes('m2firby_trunk')) { registerPanelMesh(mesh, 'trunk'); return; }
+            if (name.includes('m2firby_mirror')) { registerPanelMesh(mesh, 'mirrors'); return; }
+            if (name.includes('m2firby_body_m2firby_body_0')) { paintMeshesToSplit.push(mesh); return; }
+
+            // 2. Toyota SW4 Isolated Doors / Trunk / Roof
+            if (name.includes('fl_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_front_left'); return; }
+            if (name.includes('rf_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_front_right'); return; }
+            if (name.includes('rl_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_rear_left'); return; }
+            if (name.includes('rr_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_rear_right'); return; }
+            if (name.includes('bootdoor') && name.includes('carpaint')) { registerPanelMesh(mesh, 'trunk'); return; }
+            if (name.includes('roof') && name.includes('carpaint')) { registerPanelMesh(mesh, 'roof'); return; }
+            if (name.includes('carpaint_dmtab')) { paintMeshesToSplit.push(mesh); return; }
+
+            // 3. BMW M2 G87 (bmw_m2_g87.glb)
+            if (name.includes('carbon1_geo_loda')) { registerPanelMesh(mesh, 'roof'); return; }
+            if (name.includes('paint_geo_loda') || name.includes('paint_material')) { paintMeshesToSplit.push(mesh); return; }
+
+            // 4. Golf GTI MK7 (golf_gti_mk7.glb) & Generic Paint Meshes
+            if (name.includes('phong2') || (name.includes('carpaint') && !name.includes('phong3') && !name.includes('trim') && !name.includes('hinges'))) {
+              paintMeshesToSplit.push(mesh);
               return;
             }
 
-            // Preserves Glass Windows
-            if (name.includes('glass_window') || name.includes('windows_0') || (name.includes('window') && !name.includes('light'))) {
-              mesh.material = tintedGlassMatRef.current;
-              return;
-            }
-
-            // Wheels & Tires
-            if (name.includes('tire') || name.includes('tyre')) {
-              mesh.material = new THREE.MeshStandardMaterial({
-                color: 0x14171d,
-                roughness: 0.85,
-                metalness: 0.05,
-              });
-              return;
-            }
-            if (name.includes('wheel') || name.includes('rim') || name.includes('alloy')) {
-              mesh.material = new THREE.MeshStandardMaterial({
-                color: 0x71717a,
-                roughness: 0.35,
-                metalness: 0.65,
-              });
-              return;
-            }
-
-            // Preserves Grilles, chassis, trim, rubber and plastics in Gloss/Matte Black
-            if (
-              name.includes('grille') ||
-              name.includes('chassis') ||
-              name.includes('trim') ||
-              name.includes('rubber') ||
-              name.includes('plast') ||
-              name.includes('hinges') ||
-              name.includes('int_') ||
-              name.includes('dashboard') ||
-              name.includes('steering')
-            ) {
-              mesh.material = glossBlackMatRef.current;
-              return;
-            }
-
-            // Headlight Glass & Lights
-            if (name.includes('lightglass') || name.includes('light_max') || name.includes('light_glass')) {
+            // Headlights & Light Glass (Interactive PPF Protection)
+            if (name.includes('lightglass') || name.includes('light_max')) {
               mesh.userData = { panelId: 'headlights', isPanel: true };
-              mesh.material = new THREE.MeshStandardMaterial({
-                color: 0x93c5fd,
-                roughness: 0.10,
-                metalness: 0.85,
-              });
               if (!panelRegistrationsRef.current.has('headlights')) {
                 panelRegistrationsRef.current.set('headlights', []);
               }
@@ -575,58 +593,14 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               return;
             }
 
-            // Side Mirrors
-            if (name.includes('mirror') && !name.includes('in_mirror') && !name.includes('rearview')) {
-              mesh.userData = { panelId: 'mirrors', isPanel: true };
-              mesh.material = new THREE.MeshStandardMaterial({
-                color: 0x556272,
-                roughness: 0.45,
-                metalness: 0.20,
-              });
-              if (!panelRegistrationsRef.current.has('mirrors')) {
-                panelRegistrationsRef.current.set('mirrors', []);
-              }
-              panelRegistrationsRef.current.get('mirrors')!.push({ mesh });
+            // Side Mirrors (Generic)
+            if (name.includes('mirror') && !name.includes('in_mirror') && !name.includes('rearview') && !name.includes('glass')) {
+              registerPanelMesh(mesh, 'mirrors');
               return;
             }
 
-            // Toyota SW4 Isolated Doors / Trunk / Roof
-            if (name.includes('fl_door') && name.includes('carpaint')) {
-              registerPanelMesh(mesh, 'door_front_left');
-              return;
-            }
-            if (name.includes('rf_door') && name.includes('carpaint')) {
-              registerPanelMesh(mesh, 'door_front_right');
-              return;
-            }
-            if (name.includes('rl_door') && name.includes('carpaint')) {
-              registerPanelMesh(mesh, 'door_rear_left');
-              return;
-            }
-            if (name.includes('rr_door') && name.includes('carpaint')) {
-              registerPanelMesh(mesh, 'door_rear_right');
-              return;
-            }
-            if (name.includes('bootdoor') && name.includes('carpaint')) {
-              registerPanelMesh(mesh, 'trunk');
-              return;
-            }
-            if (name.includes('roof') && name.includes('carpaint')) {
-              registerPanelMesh(mesh, 'roof');
-              return;
-            }
-
-            // Identify Car Paint Body Meshes for clean panel separation
-            if (
-              name.includes('phong2') ||
-              name.includes('carpaint_dmtab') ||
-              (name.includes('carpaint') && !name.includes('phong3') && !name.includes('trim') && !name.includes('hinges'))
-            ) {
-              paintMeshesToSplit.push(mesh);
-            } else if (name.includes('phong3')) {
-              // Inner door frames / sills / black shutlines: keep in matte dark graphite
-              mesh.material = glossBlackMatRef.current;
-            }
+            // NOTE: All other meshes (wheels, tires, authentic glass, carbon fiber,
+            // authentic emblems, interior, exhausts) RETAIN THEIR 100% ORIGINAL FACTORY MATERIALS!
           }
         });
 
