@@ -231,7 +231,7 @@ export default function ArmorCutDashboard() {
               }}
             >
               <Box size={17} />
-              <span>Estudio 3D / CAD</span>
+              <span>Studio</span>
             </button>
           </div>
 
