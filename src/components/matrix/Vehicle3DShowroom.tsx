@@ -552,6 +552,24 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             mesh.receiveShadow = true;
             const name = (mesh.name || '').toLowerCase();
 
+            // Discard any residual non-PPF internal details (engine, interior, mechanical, screws)
+            if (
+              name.includes('engine') ||
+              name.includes('interior') ||
+              name.includes('seat') ||
+              name.includes('dash') ||
+              name.includes('steering') ||
+              name.includes('pedal') ||
+              name.includes('underbody') ||
+              name.includes('mechanical') ||
+              name.includes('suspension') ||
+              name.includes('screw') ||
+              name.includes('bolt')
+            ) {
+              mesh.visible = false;
+              return;
+            }
+
             // 1. BMW M2 F87 (bmw_m2.glb) Isolated Meshes
             if (name.includes('m2firby_hood')) { registerPanelMesh(mesh, 'hood'); return; }
             if (name.includes('m2firby_bumper_f')) { registerPanelMesh(mesh, 'bumper_front'); return; }
