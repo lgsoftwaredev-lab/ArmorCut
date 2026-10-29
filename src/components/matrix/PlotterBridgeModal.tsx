@@ -160,6 +160,35 @@ export const PlotterBridgeModal: React.FC<PlotterBridgeModalProps> = ({
           </button>
         </div>
 
+        {/* Roadmap Phase 4 Information Notice */}
+        <div
+          style={{
+            padding: '10px 24px',
+            background: 'rgba(56, 189, 248, 0.08)',
+            borderBottom: '1px solid rgba(56, 189, 248, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '10px',
+              fontFamily: 'var(--font-mono)',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              background: '#0284c7',
+              color: '#ffffff',
+              fontWeight: 700,
+            }}
+          >
+            FASE 4 · ROADMAP
+          </span>
+          <span style={{ fontSize: '11px', color: '#93c5fd', lineHeight: 1.4 }}>
+            Feature asentado en especificación técnica (<strong>specs/spec.md</strong>). Exportador vectorial HP-GL/2, GP-GL, SVG y driver Web Serial para integración de plotters industriales (Graphtec / Roland / Summa).
+          </span>
+        </div>
+
         {/* Brand & Format Selector */}
         <div
           style={{

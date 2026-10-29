@@ -184,6 +184,19 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       compMap.get(root)!.push(t);
     }
 
+    // Detect coordinate orientation (SW4 has length along X, Golf GTI has length along Z)
+    let minCoordX = 999, maxCoordX = -999;
+    let minCoordZ = 999, maxCoordZ = -999;
+    for (let i = 0; i < posAttr.count; i++) {
+      const x = posAttr.getX(i);
+      const z = posAttr.getZ(i);
+      if (x < minCoordX) minCoordX = x;
+      if (x > maxCoordX) maxCoordX = x;
+      if (z < minCoordZ) minCoordZ = z;
+      if (z > maxCoordZ) maxCoordZ = z;
+    }
+    const isXAxisLongitudinal = (maxCoordX - minCoordX) > (maxCoordZ - minCoordZ);
+
     // 3. High-precision component classifier based on topological bounds
     const classifyComponent = (
       minX: number,
@@ -196,6 +209,26 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       cy: number,
       cz: number
     ): string => {
+      if (isXAxisLongitudinal) {
+        // SW4 Orientation: X = length (0 to 4.8), Y = width (-0.92 to +0.92, cy < 0 is Left, cy > 0 is Right), Z = height
+        // Hood (Capot)
+        if (cx >= 0.05 && cx <= 1.40 && cz > 1.50 && Math.abs(cy) < 0.85) return 'hood';
+        // Front Bumper
+        if (cx < 0.65 && cz < 1.50) return 'bumper_front';
+        // Front Fenders
+        if (cx >= 0.40 && cx <= 1.70 && Math.abs(cy) > 0.65) {
+          return cy < 0 ? 'fender_left' : 'fender_right';
+        }
+        // Rear Quarters / side body frame
+        if (cx >= 1.35 && cx <= 3.80) {
+          return cy < 0 ? 'quarter_left' : 'quarter_right';
+        }
+        // Rear Bumper
+        if (cx > 3.80) return 'bumper_rear';
+        return cx > 2.0 ? 'bumper_rear' : 'bumper_front';
+      }
+
+      // Golf GTI Orientation: Z = length (-2.1 to +2.1), X = width (-0.9 to +0.9), Y = height
       // Rear spoiler / Clubsport wing
       if (cz < -1.45 && cy > 1.15 && Math.abs(cx) < 0.60) return 'rear_spoiler';
       // Roof panel
@@ -446,6 +479,34 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
         // Process materials and split car paint into clean discrete body panels
         const paintMeshesToSplit: THREE.Mesh[] = [];
 
+        // Helper to register individual isolated body panels (SW4 doors, roof, trunk)
+        const registerPanelMesh = (mesh: THREE.Mesh, panelId: string) => {
+          mesh.userData = { panelId, isPanel: true };
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          mesh.material = new THREE.MeshStandardMaterial({
+            color: 0x556272,
+            roughness: 0.45,
+            metalness: 0.20,
+          });
+
+          if (!mesh.getObjectByName(`edge_${panelId}`)) {
+            const edgesGeo = new THREE.EdgesGeometry(mesh.geometry, 25);
+            const edges = new THREE.LineSegments(
+              edgesGeo,
+              new THREE.LineBasicMaterial({ color: 0x090d16, linewidth: 1.5 })
+            );
+            edges.name = `edge_${panelId}`;
+            edges.raycast = () => {};
+            mesh.add(edges);
+
+            if (!panelRegistrationsRef.current.has(panelId)) {
+              panelRegistrationsRef.current.set(panelId, []);
+            }
+            panelRegistrationsRef.current.get(panelId)!.push({ mesh, edgeLine: edges });
+          }
+        };
+
         car.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
@@ -459,20 +520,48 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               return;
             }
 
-            // Preserves Grilles and trims in Gloss Black
-            if (name.includes('grille') || name.includes('chassis') || name.includes('trim')) {
-              mesh.material = glossBlackMatRef.current;
-              return;
-            }
-
             // Preserves Glass Windows
-            if (name.includes('glass_window') || name.includes('window')) {
+            if (name.includes('glass_window') || name.includes('windows_0') || (name.includes('window') && !name.includes('light'))) {
               mesh.material = tintedGlassMatRef.current;
               return;
             }
 
-            // Headlight Glass
-            if (name.includes('lightglass') || name.includes('light_max')) {
+            // Wheels & Tires
+            if (name.includes('tire') || name.includes('tyre')) {
+              mesh.material = new THREE.MeshStandardMaterial({
+                color: 0x14171d,
+                roughness: 0.85,
+                metalness: 0.05,
+              });
+              return;
+            }
+            if (name.includes('wheel') || name.includes('rim') || name.includes('alloy')) {
+              mesh.material = new THREE.MeshStandardMaterial({
+                color: 0x71717a,
+                roughness: 0.35,
+                metalness: 0.65,
+              });
+              return;
+            }
+
+            // Preserves Grilles, chassis, trim, rubber and plastics in Gloss/Matte Black
+            if (
+              name.includes('grille') ||
+              name.includes('chassis') ||
+              name.includes('trim') ||
+              name.includes('rubber') ||
+              name.includes('plast') ||
+              name.includes('hinges') ||
+              name.includes('int_') ||
+              name.includes('dashboard') ||
+              name.includes('steering')
+            ) {
+              mesh.material = glossBlackMatRef.current;
+              return;
+            }
+
+            // Headlight Glass & Lights
+            if (name.includes('lightglass') || name.includes('light_max') || name.includes('light_glass')) {
               mesh.userData = { panelId: 'headlights', isPanel: true };
               mesh.material = new THREE.MeshStandardMaterial({
                 color: 0x93c5fd,
@@ -487,7 +576,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             }
 
             // Side Mirrors
-            if (name.includes('mirror')) {
+            if (name.includes('mirror') && !name.includes('in_mirror') && !name.includes('rearview')) {
               mesh.userData = { panelId: 'mirrors', isPanel: true };
               mesh.material = new THREE.MeshStandardMaterial({
                 color: 0x556272,
@@ -501,10 +590,37 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               return;
             }
 
+            // Toyota SW4 Isolated Doors / Trunk / Roof
+            if (name.includes('fl_door') && name.includes('carpaint')) {
+              registerPanelMesh(mesh, 'door_front_left');
+              return;
+            }
+            if (name.includes('rf_door') && name.includes('carpaint')) {
+              registerPanelMesh(mesh, 'door_front_right');
+              return;
+            }
+            if (name.includes('rl_door') && name.includes('carpaint')) {
+              registerPanelMesh(mesh, 'door_rear_left');
+              return;
+            }
+            if (name.includes('rr_door') && name.includes('carpaint')) {
+              registerPanelMesh(mesh, 'door_rear_right');
+              return;
+            }
+            if (name.includes('bootdoor') && name.includes('carpaint')) {
+              registerPanelMesh(mesh, 'trunk');
+              return;
+            }
+            if (name.includes('roof') && name.includes('carpaint')) {
+              registerPanelMesh(mesh, 'roof');
+              return;
+            }
+
             // Identify Car Paint Body Meshes for clean panel separation
             if (
               name.includes('phong2') ||
-              (name.includes('carpaint') && !name.includes('phong3') && !name.includes('trim'))
+              name.includes('carpaint_dmtab') ||
+              (name.includes('carpaint') && !name.includes('phong3') && !name.includes('trim') && !name.includes('hinges'))
             ) {
               paintMeshesToSplit.push(mesh);
             } else if (name.includes('phong3')) {
@@ -714,7 +830,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             }}
           />
           <div style={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}>
-            Cargando Carrocería 3D Golf GTI ({loadProgress}%)
+            Cargando Carrocería 3D ({loadProgress}%)
           </div>
         </div>
       )}

@@ -398,7 +398,11 @@ export default function ArmorCutDashboard() {
             rolls={rolls}
             onOpenNewJobWithData={(data) => {
               setInitialJobData(data);
-              setPreselectedRoll(null);
+              if (data.rollId) {
+                setPreselectedRoll(rolls.find((r) => r.id === data.rollId) || null);
+              } else {
+                setPreselectedRoll(null);
+              }
               setIsNewJobModalOpen(true);
             }}
           />

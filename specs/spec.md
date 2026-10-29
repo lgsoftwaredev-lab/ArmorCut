@@ -271,3 +271,40 @@ CREATE TABLE IF NOT EXISTS ppf_cut_orders (
 2. **Frame Rate en Visor 3D:** Mínimo 55 FPS en navegadores móviles (usando geometrías simplificadas < 35,000 polígonos por modelo).
 3. **Cálculo de Anidado:** Tiempo de ejecución del algoritmo de nesting < 150 milisegundos para kits completos de hasta 25 piezas.
 4. **Compatibilidad:** 100% responsive en pantallas desde 360px (móvil) hasta monitores ultrawide 4K de mostrador.
+
+---
+
+## 8. Especificación de Futuro Feature: Motor de Nesting 2D Irregular Avanzado & Exportador de Hardware Plotter (Fase 4 - Roadmap)
+
+> **Estado:** Documentado como Feature a Futuro (Fase 4 en Roadmap de Ingeniería).  
+> **Objetivo:** Automatizar la optimización matemática de anidado poligonal sobre bobina y la comunicación directa con plotters industriales de corte (Graphtec, Roland, Summa).
+
+### 8.1. Motor de Nesting 2D Irregular Avanzado (Poligonal)
+* **Algoritmo de Disposición:** Empaquetado bidimensional basado en polígonos irregulares (*No-Fit Polygon / NFP* asistido por algoritmos genéticos de optimización geométrica).
+* **Restricciones de Material (TPU Grain & Elongation):**
+  - Orientación fija del grano molecular: Los paños de gran extensión (capots, laterales) deben respetar el eje longitudinal del rollo para evitar deformaciones mecánicas durante la estirada en caliente.
+  - Tolerancia de rotación permitida: 0° o 180° para piezas mayores; rotación libre (0° a 360°) restringida únicamente a micro-piezas (manijas, ópticas, zócalos interiores).
+* **Márgenes de Seguridad & Corte:**
+  - Margen de perímetro entre piezas: Mínimo 20mm a 30mm para garantizar corte limpio de cuchilla tangencial y facilitar el pelado (*weeding*) del film residual.
+  - Borde de pinzado de rodillos (*Pinch Roller Margin*): 25mm en los extremos laterales del rollo de 1.52m (ancho útil de corte: 1.47m).
+* **Objetivo de Rendimiento:** Aumentar la eficiencia de bobina a más del 82% en kits de carrocería completa, minimizando el costo de TPU residual descartado.
+
+### 8.2. Exportador de Comandos Vectoriales & Hardware Bridge
+* **Protocolos de Corte Industriales Soportados:**
+  1. **HP-GL/2 (Hewlett-Packard Graphics Language):**
+     - Comandos estándar: `IN` (inicialización), `SP1` (seleccionar cuchilla 1), `VS` (velocidad tangencial), `PU` (pen up / avance en vacío), `PD` (pen down / corte), `PA` (coordenadas absolutas), `NR` (finalizar y avanzar rollo).
+     - Compatible con plotters Roland CAMM-1 Pro, Summa S Class, Mimaki CG-FX.
+  2. **GP-GL (Graphtec Protocol):**
+     - Comandos nativos para control de fuerza, aceleración y corte tangencial inteligente sobre plotters Graphtec FC9000 / CE7000.
+  3. **Exportación Gráfica Directa:**
+     - Archivo `.plt` descargable para spooler local o RIP de corte propietario (CorelDraw, Illustrator, FlexiSign).
+     - Archivo `.svg` y `.dxf` (Release 12) con capas separadas de contorno exterior, perforaciones de sensores y marcas de registro ópticas.
+* **Conexión Directa USB vía Web Serial API:**
+  - Implementación con `navigator.serial` en navegadores Chromium (Chrome / Edge).
+  - Parámetros de transmisión: 9600 baud, 8 data bits, no parity, 1 stop bit, hardware flow control (RTS/CTS).
+  - Disparo de órdenes de corte directamente desde la tablet o terminal de taller sin requerir PC intermediaria con software pago.
+* **Matriz de Calibración de Corte por Micrones de TPU:**
+  - Cuchilla tangencial de 60° con compensación de offset (*Knife Offset*): 0.25mm – 0.50mm.
+  - Fuerza de corte (*Downforce*): 180g a 220g para películas de 7.5 mils; 240g a 260g para películas de 8.5 a 10 mils con liner pesado.
+  - Sobre-corte (*Overcut*): 0.30mm para garantizar cierre perfecto de esquinas en películas elásticas.
+

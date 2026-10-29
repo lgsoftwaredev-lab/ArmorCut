@@ -10,6 +10,7 @@ export interface InitialJobData {
   parts?: string[];
   metersUsed?: number;
   notes?: string;
+  rollId?: string;
 }
 
 interface NewJobModalProps {
@@ -42,10 +43,10 @@ const JobModalContent: React.FC<{
   onClose: () => void;
   onSaveJob: (jobData: CreateJobInput) => Promise<void>;
 }> = ({ rolls, preselectedRoll, initialJobData, onClose, onSaveJob }) => {
-  const activeRolls = rolls.filter((r) => r.status === 'ACTIVE' || r.id === preselectedRoll?.id);
+  const activeRolls = rolls.filter((r) => r.status === 'ACTIVE' || r.id === preselectedRoll?.id || r.id === initialJobData?.rollId);
 
   const [selectedRollId, setSelectedRollId] = useState(
-    () => preselectedRoll?.id || (activeRolls.length > 0 ? activeRolls[0].id : '')
+    () => initialJobData?.rollId || preselectedRoll?.id || (activeRolls.length > 0 ? activeRolls[0].id : '')
   );
   const [vehicle, setVehicle] = useState(initialJobData?.vehicle || '');
   const [licensePlate, setLicensePlate] = useState('');

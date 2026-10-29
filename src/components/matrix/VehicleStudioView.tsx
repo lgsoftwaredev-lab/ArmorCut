@@ -40,6 +40,7 @@ interface VehicleStudioViewProps {
     parts: string[];
     metersUsed: number;
     notes: string;
+    rollId?: string;
   }) => void;
 }
 
@@ -136,6 +137,7 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
       vehicle: cleanVehicleName,
       parts: panelNames,
       metersUsed: calcResult.billedLinearMeters,
+      rollId: selectedRollId,
       notes: `Patrón calculado en Estudio CAD/Nesting ArmorCut (${calcResult.selectedPanels.length} piezas, ${calcResult.sqMetersTotal} m² neta, rendimiento bobina ${calcResult.nesting.efficiencyPercent}%)`,
     });
   };
@@ -192,7 +194,7 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
         </div>
 
         {/* Center: Vehicle Models Carousel / Quick Buttons */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {Object.values(VEHICLE_CATALOG).map((v) => {
             const isSelected = selectedVehicleId === v.id;
             return (
@@ -201,23 +203,23 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
                 type="button"
                 onClick={() => setSelectedVehicleId(v.id)}
                 style={{
-                  padding: '6px 12px',
+                  padding: '7px 14px',
                   borderRadius: '8px',
-                  fontSize: '11px',
+                  fontSize: '12px',
                   fontWeight: isSelected ? 700 : 500,
-                  color: isSelected ? '#ffffff' : '#8893a4',
+                  color: isSelected ? '#ffffff' : '#94a3b8',
                   background: isSelected ? 'var(--accent-red)' : '#141822',
-                  border: isSelected ? '1px solid var(--accent-red-hover)' : '1px solid rgba(255, 255, 255, 0.06)',
+                  border: isSelected ? '1px solid var(--accent-red-hover)' : '1px solid rgba(255, 255, 255, 0.08)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
-                  boxShadow: isSelected ? '0 0 12px var(--accent-red-glow)' : 'none',
+                  boxShadow: isSelected ? '0 0 14px var(--accent-red-glow)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                 }}
               >
                 {v.id === 'golf_gti_mk7' && '🏎️ Golf GTI MK7'}
-                {v.id === 'porsche_gt3' && '🏁 911 GT3 RS'}
-                {v.id === 'audi_rs3' && '⭕ Audi RS3'}
-                {v.id === 'peugeot_208' && '🦁 208 Sport'}
-                {v.id === 'toyota_hilux' && '🛻 Hilux GR'}
+                {v.id === 'toyota_sw4' && '🚙 Toyota SW4 (Fortuner)'}
               </button>
             );
           })}
@@ -511,10 +513,26 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
                   background: '#141822',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
                   cursor: 'pointer',
+                  position: 'relative',
                 }}
               >
-                <Cpu style={{ width: 15, height: 15 }} />
-                Exportar Comandos a Plotter
+                <Cpu style={{ width: 15, height: 15, color: '#38bdf8' }} />
+                <span>Exportar Comandos a Plotter</span>
+                <span
+                  style={{
+                    fontSize: '9px',
+                    fontFamily: 'var(--font-mono)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    color: '#38bdf8',
+                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                    letterSpacing: '0.04em',
+                    fontWeight: 700,
+                  }}
+                >
+                  FASE 4 · ROADMAP
+                </span>
               </button>
             </div>
           </div>

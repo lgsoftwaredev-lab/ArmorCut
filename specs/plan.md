@@ -96,18 +96,16 @@ El trabajo se organiza en **5 fases secuenciales con ramas aisladas**:
 
 ---
 
-### FASE 4: Puente con la Cortadora (*Plotter Bridge*)
-**Rama:** `feature/plotter-bridge`  
-**Objetivo:** Despachar órdenes de corte vectoriales directamente hacia el plotter o exportarlas en formatos estándar.
+### FASE 4: Puente con la Cortadora (*Plotter Bridge*) & Nesting 2D Avanzado [ROADMAP / FEATURE A FUTURO]
+**Estado:** Documentado como Feature a Futuro (asentado formalmente en `specs/spec.md` Sección 8).  
+**Objetivo:** Despachar órdenes de corte vectoriales directamente hacia el plotter y ejecutar algoritmos avanzados de anidado irregular de alto rendimiento.
 
-* [ ] **Tarea 4.1: Exportador Vectorial de Corte (`.dxf` y `.svg`)**
-  - Generar el archivo de corte con las piezas organizadas en el ancho de 1.52m con márgenes de dobladillo incluidos.
-* [ ] **Tarea 4.2: Generador de Comandos HP-GL/2 y GP-GL (`.plt`)**
-  - Mapear las coordenadas vectoriales a instrucciones de corte tangencial (`IN; SP1; VS40; PU; PD; ... NR;`) compatibles con Graphtec y Roland.
-* [ ] **Tarea 4.3: Conexión Directa USB vía Web Serial API**
-  - Permitir abrir el puerto serie USB desde Chrome y disparar el corte directo al plotter sin intermediarios.
-* [ ] **Criterios de Aceptación Fase 4:**
-  - El sistema descarga archivos `.dxf` y `.plt` válidos y envía paquetes de datos al puerto de corte.
+* [x] **Tarea 4.1: Prototipo y Generador de Comandos HP-GL/2 y GP-GL (`.plt` y `.svg`)**
+  - Generador de comandos tangenciales y exportador funcional disponible en el modal de previsualización técnica.
+* [x] **Tarea 4.2: Asentamiento Formal de Especificaciones de Hardware & Algoritmo de Nesting**
+  - Documentación detallada en `specs/spec.md` sobre empaquetado poligonal NFP, restricciones de elongación de TPU, márgenes de seguridad de 25mm y matriz de calibración de corte.
+* [ ] **Tarea 4.3: Integración Física en Taller con Plotter de Producción (Fase Futura)**
+  - Homologación directa con modelo físico Graphtec / Roland mediante Web Serial API o spooler de red LAN.
 
 ---
 
