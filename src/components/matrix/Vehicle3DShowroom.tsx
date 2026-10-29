@@ -43,8 +43,8 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
   const controlsRef = useRef<OrbitControls | null>(null);
   const carModelRef = useRef<THREE.Group | null>(null);
 
-  // Map of panelId -> array of { mesh, edgeLine }
-  const panelRegistrationsRef = useRef<Map<string, { mesh: THREE.Mesh; edgeLine?: THREE.LineSegments }[]>>(new Map());
+  // Map of panelId -> array of { mesh }
+  const panelRegistrationsRef = useRef<Map<string, { mesh: THREE.Mesh }[]>>(new Map());
   const raycasterRef = useRef(new THREE.Raycaster());
   const mouseRef = useRef(new THREE.Vector2());
 
@@ -79,7 +79,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       const isSelected = selectedPanelIds.includes(panelId);
       const isHovered = hoveredPanelId === panelId;
 
-      registrations.forEach(({ mesh, edgeLine }) => {
+      registrations.forEach(({ mesh }) => {
         if (!mesh.material) return;
         const mat = mesh.material as THREE.MeshStandardMaterial;
 
@@ -91,9 +91,6 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
           mat.emissive.setHex(isHovered ? 0xf43f5e : 0x9f1239);
           mat.emissiveIntensity = isHovered ? 0.55 : 0.35;
 
-          if (edgeLine && edgeLine.material) {
-            (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0xfecdd3); // Bright glowing edge
-          }
         } else if (isHovered) {
           // Hovered Unselected Panel: Electric technical cyan highlight for instant feedback
           mat.color.setHex(0x0284c7);
@@ -101,10 +98,6 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
           mat.metalness = 0.40;
           mat.emissive.setHex(0x0284c7);
           mat.emissiveIntensity = 0.45;
-
-          if (edgeLine && edgeLine.material) {
-            (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0x38bdf8); // Glowing cyan border
-          }
         } else {
           // Default Unselected Panel: 100% Original Factory Paint & Finish!
           const orig = mesh.userData.originalMaterial as THREE.MeshStandardMaterial;
@@ -124,12 +117,6 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             mat.emissive.setHex(0x000000);
             mat.emissiveIntensity = 0;
             mat.needsUpdate = true;
-          }
-
-          if (edgeLine && edgeLine.material) {
-            (edgeLine.material as THREE.LineBasicMaterial).color.setHex(0x090d16);
-            (edgeLine.material as THREE.LineBasicMaterial).opacity = 0.35;
-            edgeLine.visible = true;
           }
         }
       });
@@ -386,22 +373,12 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       pMesh.castShadow = true;
       pMesh.receiveShadow = true;
 
-      // Crisp subtle shutline border outline
-      const edgesGeo = new THREE.EdgesGeometry(pGeom, 25);
-      const edges = new THREE.LineSegments(
-        edgesGeo,
-        new THREE.LineBasicMaterial({ color: 0x090d16, transparent: true, opacity: 0.45, linewidth: 1.2 })
-      );
-      edges.name = `edge_${panelId}`;
-      edges.raycast = () => {}; // Avoid intercepting raycast directly
-      pMesh.add(edges);
-
       panelGroup.add(pMesh);
 
       if (!panelRegistrationsRef.current.has(panelId)) {
         panelRegistrationsRef.current.set(panelId, []);
       }
-      panelRegistrationsRef.current.get(panelId)!.push({ mesh: pMesh, edgeLine: edges });
+      panelRegistrationsRef.current.get(panelId)!.push({ mesh: pMesh });
     });
 
     return panelGroup;
@@ -537,21 +514,10 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             originalMetalness: origMat?.metalness ?? 0.35,
           };
 
-          if (!mesh.getObjectByName(`edge_${panelId}`)) {
-            const edgesGeo = new THREE.EdgesGeometry(mesh.geometry, 28);
-            const edges = new THREE.LineSegments(
-              edgesGeo,
-              new THREE.LineBasicMaterial({ color: 0x090d16, transparent: true, opacity: 0.45, linewidth: 1.2 })
-            );
-            edges.name = `edge_${panelId}`;
-            edges.raycast = () => {};
-            mesh.add(edges);
-
-            if (!panelRegistrationsRef.current.has(panelId)) {
-              panelRegistrationsRef.current.set(panelId, []);
-            }
-            panelRegistrationsRef.current.get(panelId)!.push({ mesh, edgeLine: edges });
+          if (!panelRegistrationsRef.current.has(panelId)) {
+            panelRegistrationsRef.current.set(panelId, []);
           }
+          panelRegistrationsRef.current.get(panelId)!.push({ mesh });
         };
 
         car.traverse((child) => {
