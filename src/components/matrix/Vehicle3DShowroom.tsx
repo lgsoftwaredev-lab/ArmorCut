@@ -29,6 +29,10 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
   const [loadProgress, setLoadProgress] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isRotating, setIsRotating] = useState(false);
+  const isRotatingRef = useRef(isRotating);
+  useEffect(() => {
+    isRotatingRef.current = isRotating;
+  }, [isRotating]);
   const [ppfFinish, setPpfFinish] = useState<'GLOSS' | 'MATTE'>('GLOSS');
   const [activeCameraAngle, setActiveCameraAngle] = useState<'iso' | 'front' | 'side' | 'rear' | 'top'>('iso');
 
@@ -131,6 +135,11 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       });
     });
   }, [selectedPanelIds, hoveredPanelId, ppfFinish]);
+
+  const updateMaterialsRef = useRef(updateMaterials);
+  useEffect(() => {
+    updateMaterialsRef.current = updateMaterials;
+  }, [updateMaterials]);
 
   useEffect(() => {
     updateMaterials();
@@ -690,7 +699,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
 
         scene.add(car);
         setIsLoading(false);
-        updateMaterials();
+        updateMaterialsRef.current?.();
       },
       (xhr) => {
         if (xhr.total > 0) setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
@@ -708,7 +717,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       animId = requestAnimationFrame(animate);
 
       if (controlsRef.current) {
-        controlsRef.current.autoRotate = isRotating;
+        controlsRef.current.autoRotate = isRotatingRef.current;
         controlsRef.current.autoRotateSpeed = 1.4;
         controlsRef.current.update();
       }
@@ -735,7 +744,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
     };
-  }, [vehicleModelPath, splitGLTFCarPaintIntoPanels, updateMaterials]);
+  }, [vehicleModelPath, splitGLTFCarPaintIntoPanels]);
 
   // Raycasting & Mouse Interaction
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
