@@ -527,7 +527,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             mesh.receiveShadow = true;
             const name = (mesh.name || '').toLowerCase();
 
-            // Discard any residual non-PPF internal details (engine, interior, mechanical, screws)
+            // 1. Discard non-PPF internal details (engine, interior, mechanical, chassis, exhaust, screws)
             if (
               name.includes('engine') ||
               name.includes('interior') ||
@@ -539,50 +539,44 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               name.includes('mechanical') ||
               name.includes('suspension') ||
               name.includes('screw') ||
-              name.includes('bolt')
+              name.includes('bolt') ||
+              name.includes('chassis') ||
+              name.includes('exhaust') ||
+              name.includes('gap_fill') ||
+              name.includes('pipe') ||
+              (name.includes('polysurface') && name.includes('silver'))
             ) {
               mesh.visible = false;
               return;
             }
 
-            // 1. BMW M2 F87 (bmw_m2.glb) Isolated Meshes
-            if (name.includes('m2firby_hood')) { registerPanelMesh(mesh, 'hood'); return; }
-            if (name.includes('m2firby_bumper_f')) { registerPanelMesh(mesh, 'bumper_front'); return; }
-            if (name.includes('m2firby_bumper_r')) { registerPanelMesh(mesh, 'bumper_rear'); return; }
-            if (name.includes('m2firby_door_l')) { registerPanelMesh(mesh, 'door_front_left'); return; }
-            if (name.includes('m2firby_door_r')) { registerPanelMesh(mesh, 'door_front_right'); return; }
-            if (name.includes('m2firby_fender_l')) { registerPanelMesh(mesh, 'fender_left'); return; }
-            if (name.includes('m2firby_fender_r')) { registerPanelMesh(mesh, 'fender_right'); return; }
-            if (name.includes('m2firby_trunk')) { registerPanelMesh(mesh, 'trunk'); return; }
-            if (name.includes('m2firby_mirror')) { registerPanelMesh(mesh, 'mirrors'); return; }
-            if (name.includes('m2firby_body_m2firby_body_0')) { paintMeshesToSplit.push(mesh); return; }
+            // 2. Windows & Glass: Standardize to G87 Studio Blackout Glass (High Gloss, Zero Cabin Glare)
+            const isWindowGlass =
+              !name.includes('light') &&
+              !name.includes('lamp') &&
+              !name.includes('red_glass') &&
+              (name.includes('window') ||
+                name.includes('glass') ||
+                name.includes('windshield') ||
+                name.includes('backlight') ||
+                name.includes('doorglass') ||
+                name.includes('sideglass') ||
+                name.includes('phong4') ||
+                name.includes('phong13') ||
+                name.includes('toner'));
 
-            // 2. Toyota SW4 Isolated Doors / Trunk / Roof
-            if (name.includes('fl_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_front_left'); return; }
-            if (name.includes('rf_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_front_right'); return; }
-            if (name.includes('rl_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_rear_left'); return; }
-            if (name.includes('rr_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_rear_right'); return; }
-            if (name.includes('bootdoor') && name.includes('carpaint')) { registerPanelMesh(mesh, 'trunk'); return; }
-            if (name.includes('roof') && name.includes('carpaint')) { registerPanelMesh(mesh, 'roof'); return; }
-            if (name.includes('carpaint_dmtab')) { paintMeshesToSplit.push(mesh); return; }
-
-            // 3. BMW M2 G87 (bmw_m2_g87.glb)
-            if (name.includes('carbon1_geo_loda')) { registerPanelMesh(mesh, 'roof'); return; }
-            if (name.includes('paint_geo_loda') || name.includes('paint_material')) { paintMeshesToSplit.push(mesh); return; }
-
-            // 4. Golf GTI MK7 (golf_gti_mk7.glb) & Generic Paint Meshes
-            if (name.includes('phong2') || (name.includes('carpaint') && !name.includes('phong3') && !name.includes('trim') && !name.includes('hinges'))) {
-              paintMeshesToSplit.push(mesh);
+            if (isWindowGlass) {
+              mesh.material = new THREE.MeshStandardMaterial({
+                color: 0x050609, // Pitch black blackout tint
+                roughness: 0.03,
+                metalness: 0.20,
+              });
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
               return;
             }
 
-            // Side Mirrors (Generic)
-            if (name.includes('mirror') && !name.includes('in_mirror') && !name.includes('rearview') && !name.includes('glass')) {
-              registerPanelMesh(mesh, 'mirrors');
-              return;
-            }
-
-            // 5. Taillights: Standardize to G87 Shadowline Smoked Ruby Red
+            // 3. Taillights: Standardize to G87 Shadowline Smoked Ruby Red
             const isTaillight =
               name.includes('taillight') ||
               name.includes('red_glass') ||
@@ -603,7 +597,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               return;
             }
 
-            // 6. Headlights: Standardize to G87 Shadowline Smoked Black Optical Housing
+            // 4. Headlights: Standardize to G87 Shadowline Smoked Black Optical Housing
             const isHeadlight =
               name.includes('headlight') ||
               name.includes('headlamp') ||
@@ -629,26 +623,43 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               return;
             }
 
-            // 7. Windows & Glass: Standardize to G87 Studio Blackout Glass (High Gloss, Zero Cabin Glare)
-            const isWindowGlass =
-              name.includes('window') ||
-              name.includes('glass') ||
-              name.includes('windshield') ||
-              name.includes('backlight') ||
-              name.includes('doorglass') ||
-              name.includes('sideglass') ||
-              name.includes('phong4') ||
-              name.includes('phong13') ||
-              name.includes('toner');
+            // 5. BMW M2 F87 (bmw_m2.glb) Isolated Meshes
+            if (name.includes('m2firby_hood')) { registerPanelMesh(mesh, 'hood'); return; }
+            if (name.includes('m2firby_bumper_f')) { registerPanelMesh(mesh, 'bumper_front'); return; }
+            if (name.includes('m2firby_bumper_r')) { registerPanelMesh(mesh, 'bumper_rear'); return; }
+            if (name.includes('m2firby_door_l')) { registerPanelMesh(mesh, 'door_front_left'); return; }
+            if (name.includes('m2firby_door_r')) { registerPanelMesh(mesh, 'door_front_right'); return; }
+            if (name.includes('m2firby_fender_l')) { registerPanelMesh(mesh, 'fender_left'); return; }
+            if (name.includes('m2firby_fender_r')) { registerPanelMesh(mesh, 'fender_right'); return; }
+            if (name.includes('m2firby_trunk')) { registerPanelMesh(mesh, 'trunk'); return; }
+            if (name.includes('m2firby_mirror')) { registerPanelMesh(mesh, 'mirrors'); return; }
+            if (name.includes('m2firby_body_m2firby_body_0')) { paintMeshesToSplit.push(mesh); return; }
 
-            if (isWindowGlass) {
-              mesh.material = new THREE.MeshStandardMaterial({
-                color: 0x050609, // Pitch black blackout tint
-                roughness: 0.03,
-                metalness: 0.20,
-              });
-              mesh.castShadow = true;
-              mesh.receiveShadow = true;
+            // 6. Toyota SW4 Isolated Doors / Trunk / Roof / Split Body
+            if (name.includes('fl_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_front_left'); return; }
+            if (name.includes('rf_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_front_right'); return; }
+            if (name.includes('rl_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_rear_left'); return; }
+            if (name.includes('rr_door') && name.includes('carpaint')) { registerPanelMesh(mesh, 'door_rear_right'); return; }
+            if (name.includes('bootdoor') && name.includes('carpaint')) { registerPanelMesh(mesh, 'trunk'); return; }
+            if (name.includes('roof') && name.includes('carpaint')) { registerPanelMesh(mesh, 'roof'); return; }
+            if (name.includes('carpaint_dmtab') && (name.includes('ext_carpaint') || name.includes('carpaint_0'))) {
+              paintMeshesToSplit.push(mesh);
+              return;
+            }
+
+            // 7. BMW M2 G87 (bmw_m2_g87.glb)
+            if (name.includes('carbon1_geo_loda')) { registerPanelMesh(mesh, 'roof'); return; }
+            if (name.includes('paint_geo_loda') || name.includes('paint_material')) { paintMeshesToSplit.push(mesh); return; }
+
+            // 8. Golf GTI MK7 (golf_gti_mk7.glb) & Generic Paint Meshes
+            if (name.includes('phong2') || (name.includes('carpaint') && !name.includes('phong3') && !name.includes('trim') && !name.includes('hinges'))) {
+              paintMeshesToSplit.push(mesh);
+              return;
+            }
+
+            // Side Mirrors (Generic)
+            if (name.includes('mirror') && !name.includes('in_mirror') && !name.includes('rearview') && !name.includes('glass')) {
+              registerPanelMesh(mesh, 'mirrors');
               return;
             }
 
