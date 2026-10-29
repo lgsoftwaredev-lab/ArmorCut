@@ -601,24 +601,83 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               return;
             }
 
-            // Headlights & Light Glass (Interactive PPF Protection)
-            if (name.includes('lightglass') || name.includes('light_max')) {
-              mesh.userData = { panelId: 'headlights', isPanel: true };
-              if (!panelRegistrationsRef.current.has('headlights')) {
-                panelRegistrationsRef.current.set('headlights', []);
-              }
-              panelRegistrationsRef.current.get('headlights')!.push({ mesh });
-              return;
-            }
-
             // Side Mirrors (Generic)
             if (name.includes('mirror') && !name.includes('in_mirror') && !name.includes('rearview') && !name.includes('glass')) {
               registerPanelMesh(mesh, 'mirrors');
               return;
             }
 
-            // NOTE: All other meshes (wheels, tires, authentic glass, carbon fiber,
-            // authentic emblems, interior, exhausts) RETAIN THEIR 100% ORIGINAL FACTORY MATERIALS!
+            // 5. Taillights: Standardize to G87 Shadowline Smoked Ruby Red
+            const isTaillight =
+              name.includes('taillight') ||
+              name.includes('red_glass') ||
+              name.includes('breaklight') ||
+              name.includes('bootlight') ||
+              name.includes('tailight') ||
+              name.includes('chmsl') ||
+              name.includes('reverselight');
+
+            if (isTaillight) {
+              mesh.material = new THREE.MeshStandardMaterial({
+                color: 0x33050a, // Dark smoked ruby
+                roughness: 0.12,
+                metalness: 0.35,
+              });
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
+              return;
+            }
+
+            // 6. Headlights: Standardize to G87 Shadowline Smoked Black Optical Housing
+            const isHeadlight =
+              name.includes('headlight') ||
+              name.includes('headlamp') ||
+              name.includes('runninglight') ||
+              name.includes('foglight') ||
+              name.includes('lightglass') ||
+              name.includes('light_max') ||
+              name.includes('ext_light') ||
+              name.includes('lighta_material1');
+
+            if (isHeadlight) {
+              const shadowlineMat = new THREE.MeshStandardMaterial({
+                color: 0x0c0e14, // Deep obsidian shadowline
+                roughness: 0.08,
+                metalness: 0.45,
+              });
+              mesh.material = shadowlineMat;
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
+
+              // Register as interactive PPF protection panel
+              registerPanelMesh(mesh, 'headlights');
+              return;
+            }
+
+            // 7. Windows & Glass: Standardize to G87 Studio Blackout Glass (High Gloss, Zero Cabin Glare)
+            const isWindowGlass =
+              name.includes('window') ||
+              name.includes('glass') ||
+              name.includes('windshield') ||
+              name.includes('backlight') ||
+              name.includes('doorglass') ||
+              name.includes('sideglass') ||
+              name.includes('phong4') ||
+              name.includes('phong13') ||
+              name.includes('toner');
+
+            if (isWindowGlass) {
+              mesh.material = new THREE.MeshStandardMaterial({
+                color: 0x050609, // Pitch black blackout tint
+                roughness: 0.03,
+                metalness: 0.20,
+              });
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
+              return;
+            }
+
+            // NOTE: All other meshes (wheels, tires, carbon fiber, emblems, exhausts) RETAIN THEIR ORIGINAL FACTORY MATERIALS!
           }
         });
 
