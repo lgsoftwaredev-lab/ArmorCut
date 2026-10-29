@@ -18,6 +18,7 @@ import { CarBlueprintViewer } from './CarBlueprintViewer';
 import { Vehicle3DShowroom } from './Vehicle3DShowroom';
 import { RollNestingVisualizer } from './RollNestingVisualizer';
 import { PlotterBridgeModal } from './PlotterBridgeModal';
+import { VehicleCatalogSelector } from './VehicleCatalogSelector';
 import {
   Box,
   LayoutGrid,
@@ -31,6 +32,7 @@ import {
   ChevronRight,
   Cpu,
   ArrowRight,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface VehicleStudioViewProps {
@@ -48,6 +50,9 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
   rolls,
   onOpenNewJobWithData,
 }) => {
+  // Navigation Screen State (Catalog Selector vs Studio Workspace)
+  const [studioScreen, setStudioScreen] = useState<'CATALOG' | 'STUDIO'>('CATALOG');
+
   // Vehicle Selection State
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('golf_gti_mk7');
   const vehicle = VEHICLE_CATALOG[selectedVehicleId] || VEHICLE_CATALOG.golf_gti_mk7;
@@ -142,6 +147,18 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
     });
   };
 
+  if (studioScreen === 'CATALOG') {
+    return (
+      <VehicleCatalogSelector
+        vehicles={Object.values(VEHICLE_CATALOG)}
+        onSelectVehicle={(vehicleId) => {
+          setSelectedVehicleId(vehicleId);
+          setStudioScreen('STUDIO');
+        }}
+      />
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
       {/* 1. TOP HERO: VEHICLE SELECTOR & MODE SWITCH */}
@@ -158,39 +175,74 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
           gap: '16px',
         }}
       >
-        {/* Left: Vehicle Title */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span
-              style={{
-                fontSize: '11px',
-                fontFamily: 'var(--font-mono)',
-                textTransform: 'uppercase',
-                color: 'var(--accent-red)',
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-              }}
-            >
-              Estudio 3D & Matriz CAD de Corte
-            </span>
-            <span
-              style={{
-                fontSize: '10px',
-                fontFamily: 'var(--font-mono)',
-                background: 'rgba(230, 25, 55, 0.15)',
-                color: 'var(--accent-red)',
-                border: '1px solid var(--accent-red-border)',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                fontWeight: 600,
-              }}
-            >
-              {vehicle.badge}
-            </span>
+        {/* Left: Back to Catalog Button + Vehicle Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setStudioScreen('CATALOG')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 14px',
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              color: '#cbd5e1',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 600,
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(230, 25, 55, 0.15)';
+              e.currentTarget.style.borderColor = 'var(--accent-red)';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+              e.currentTarget.style.color = '#cbd5e1';
+            }}
+            title="Volver a la selección y catálogo de vehículos"
+          >
+            <ArrowLeft size={14} />
+            <span>Catálogo</span>
+          </button>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontFamily: 'var(--font-mono)',
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-red)',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                }}
+              >
+                Estudio 3D & Matriz CAD de Corte
+              </span>
+              <span
+                style={{
+                  fontSize: '10px',
+                  fontFamily: 'var(--font-mono)',
+                  background: 'rgba(230, 25, 55, 0.15)',
+                  color: 'var(--accent-red)',
+                  border: '1px solid var(--accent-red-border)',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontWeight: 600,
+                }}
+              >
+                {vehicle.badge}
+              </span>
+            </div>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+              {vehicle.name}
+            </h2>
           </div>
-          <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: 0 }}>
-            {vehicle.name}
-          </h2>
         </div>
 
         {/* Center: Vehicle Models Carousel / Quick Buttons */}
