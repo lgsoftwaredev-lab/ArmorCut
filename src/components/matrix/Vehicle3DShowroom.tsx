@@ -215,6 +215,14 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
     const dimZ = maxCoordZ - minCoordZ;
     const isXAxisLongitudinal = dimX > dimY && dimX > dimZ;
     const isYAxisLongitudinal = dimY > dimX && dimY > dimZ;
+    const meshLowerName = (paintMesh.name || '').toLowerCase();
+    const isGolfDoorFrameTrim = meshLowerName.includes('phong11sg1');
+    const isGolfPianoBlackTrim = meshLowerName.includes('phong10sg1');
+    const isGolfGlassOrLight =
+      meshLowerName.includes('phong4sg1') ||
+      meshLowerName.includes('phong5sg1') ||
+      meshLowerName.includes('phong6sg1') ||
+      meshLowerName.includes('phong13sg1');
 
     // 3. High-precision component classifier based on topological bounds
     const classifyComponent = (
@@ -228,6 +236,65 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       cy: number,
       cz: number
     ): string => {
+      // Golf GTI MK7 Piano Black exterior trim mesh (phong10SG1):
+      // Isolate ONLY the exterior side mirror housings (carcasas de espejos retrovisores)
+      if (isGolfPianoBlackTrim) {
+        if (
+          minY >= 0.77 &&
+          maxY <= 0.94 &&
+          minZ >= 0.51 &&
+          maxZ <= 0.75 &&
+          Math.abs(cx) > 0.82
+        ) {
+          return 'mirrors';
+        }
+        return '__static__';
+      }
+
+      // Golf GTI MK7 glass & optical meshes (phong4SG1, phong5SG1, phong6SG1, phong13SG1):
+      // Separate front headlights, rear taillights, and each individual window/sunroof glass piece
+      if (isGolfGlassOrLight) {
+        if (minZ > 1.40) {
+          return 'headlights';
+        }
+        if (maxZ < -1.50 && minY >= 0.60 && maxY <= 0.85) {
+          return 'taillights';
+        }
+        if (maxZ < -1.50 && minY > 0.85 && maxY <= 1.18 && Math.abs(cx) < 0.30) {
+          return 'rear_windshield';
+        }
+        if (minY > 1.19 && minZ > -0.75 && maxZ < 0.35 && Math.abs(cx) < 0.50) {
+          return 'sunroof';
+        }
+        if (minZ > 0.20 && maxZ < 1.25 && Math.abs(cx) < 0.30 && maxY <= 1.23) {
+          return 'windshield';
+        }
+        if (!meshLowerName.includes('phong6sg1') && minZ > -0.55 && maxZ < 0.90 && Math.abs(cx) > 0.50) {
+          return cx > 0 ? 'window_front_left' : 'window_front_right';
+        }
+        if (!meshLowerName.includes('phong6sg1') && minZ > -1.35 && maxZ < -0.52 && Math.abs(cx) > 0.50) {
+          return cx > 0 ? 'window_rear_left' : 'window_rear_right';
+        }
+        return '__static__';
+      }
+
+      // Golf GTI MK7 smooth black trim mesh: isolate ONLY the flat Piano Black B-Pillar vertical applique
+      // and exclude all rubber window weatherstrips/seals (upper arch seal, lower horizontal beltline seal, rear rubber lip)
+      if (isGolfDoorFrameTrim) {
+        if (
+          minY >= 0.84 &&
+          maxY <= 1.23 &&
+          maxY - minY > 0.30 &&
+          minZ >= -0.57 &&
+          maxZ <= -0.35 &&
+          maxZ - minZ > 0.14 &&
+          Math.abs(cx) > 0.50
+        ) {
+          return 'pillars_a_b';
+        }
+        return '__static__';
+      }
+
       // 1. Toyota SW4 (Longitudinal X)
       if (isXAxisLongitudinal) {
         if (cx >= 0.05 && cx <= 1.40 && cz > 1.50 && Math.abs(cy) < 0.85) return 'hood';
@@ -251,7 +318,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
         return cy > 0 ? 'quarter_left' : 'quarter_right';
       }
 
-      // 3. Golf GTI MK7 / BMW M2 G87 (Longitudinal Z)
+      // 3. Golf GTI MK7 / BMW M2 G87 (Longitudinal Z, +Z = Front, +X = Left / Conductor, -X = Right / Acompañante)
       // Rear spoiler / Clubsport wing
       if (cz < -1.45 && cy > 1.15 && Math.abs(cx) < 0.60) return 'rear_spoiler';
       // Roof panel
@@ -264,17 +331,28 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       if (cz > 0.70 && cy > 0.48 && Math.abs(cx) < 0.85) return 'hood';
       // Front bumper
       if (cz > 1.40 && cy < 0.65) return 'bumper_front';
-      // Front fenders
+      // Front fenders (cx > 0 is Left / Conductor, cx < 0 is Right / Acompañante)
       if (cz >= 0.60 && cz <= 1.80 && cy >= 0.10 && minZ > 0.55) {
-        return cx < 0 ? 'fender_left' : 'fender_right';
+        return cx > 0 ? 'fender_left' : 'fender_right';
+      }
+      // Door handles (Manijas de puerta independientes de la chapa de la puerta)
+      if (
+        minY >= 0.68 &&
+        maxY <= 0.78 &&
+        maxY - minY < 0.08 &&
+        minZ >= -0.50 &&
+        maxZ <= -0.20 &&
+        Math.abs(cx) > 0.80
+      ) {
+        return 'door_cups';
       }
       // Rear Quarters & side body frame
       if (minZ < -0.6) {
-        return cx < 0 ? 'quarter_left' : 'quarter_right';
+        return cx > 0 ? 'quarter_left' : 'quarter_right';
       }
-      // Front Doors
+      // Front Doors (cx > 0 is Left / Conductor, cx < 0 is Right / Acompañante)
       if (maxY < 0.98 && minZ >= -0.65 && maxZ <= 0.95) {
-        return cx < 0 ? 'door_front_left' : 'door_front_right';
+        return cx > 0 ? 'door_front_left' : 'door_front_right';
       }
       return cz > 0 ? 'bumper_front' : 'bumper_rear';
     };
@@ -356,12 +434,42 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       else pGeom.computeVertexNormals();
       if (newUV) pGeom.setAttribute('uv', new THREE.BufferAttribute(newUV, 2));
 
-      // Clone authentic factory car paint material
-      const sourceMat = paintMesh.material as THREE.MeshStandardMaterial;
+      // Clone authentic factory car paint material or specialized optical/glass finish
+      let sourceMat = paintMesh.material as THREE.MeshStandardMaterial;
+      if (isGolfGlassOrLight) {
+        if (panelId === 'headlights') {
+          sourceMat = new THREE.MeshStandardMaterial({
+            color: 0x0c0e14,
+            roughness: 0.08,
+            metalness: 0.45,
+          });
+        } else if (panelId === 'taillights') {
+          sourceMat = new THREE.MeshStandardMaterial({
+            color: 0x33050a,
+            roughness: 0.12,
+            metalness: 0.35,
+          });
+        } else {
+          sourceMat = new THREE.MeshStandardMaterial({
+            color: 0x050609,
+            roughness: 0.03,
+            metalness: 0.20,
+          });
+        }
+      }
       const panelMat = sourceMat ? sourceMat.clone() : new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.3 });
 
       const pMesh = new THREE.Mesh(pGeom, panelMat);
       pMesh.name = `panel_${panelId}`;
+      pMesh.castShadow = true;
+      pMesh.receiveShadow = true;
+
+      if (panelId === '__static__') {
+        pMesh.userData = { isPanel: false };
+        panelGroup.add(pMesh);
+        return;
+      }
+
       pMesh.userData = {
         panelId,
         isPanel: true,
@@ -370,8 +478,6 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
         originalRoughness: sourceMat?.roughness ?? 0.15,
         originalMetalness: sourceMat?.metalness ?? 0.35,
       };
-      pMesh.castShadow = true;
-      pMesh.receiveShadow = true;
 
       panelGroup.add(pMesh);
 
@@ -550,6 +656,29 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               return;
             }
 
+            // 1b. Golf GTI MK7 Rear Bumper Lower Reflectors (Static non-selectable reflectors)
+            if (name.includes('bumperr_seta') && (name.includes('phong4sg1') || name.includes('phong5sg1'))) {
+              mesh.material = new THREE.MeshStandardMaterial({
+                color: 0x33050a,
+                roughness: 0.15,
+                metalness: 0.30,
+              });
+              mesh.userData = { isPanel: false };
+              return;
+            }
+
+            // 1c. Golf GTI MK7 Merged Glass & Optical Meshes: route to topological splitter
+            // so headlights, taillights, windshield, sunroof, rear windshield, and each side window are independent
+            if (
+              name.includes('phong4sg1') ||
+              name.includes('phong5sg1') ||
+              name.includes('phong6sg1') ||
+              name.includes('phong13sg1')
+            ) {
+              paintMeshesToSplit.push(mesh);
+              return;
+            }
+
             // 2. Windows & Glass: Standardize to G87 Studio Blackout Glass (High Gloss, Zero Cabin Glare)
             const isWindowGlass =
               !name.includes('light') &&
@@ -561,8 +690,6 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
                 name.includes('backlight') ||
                 name.includes('doorglass') ||
                 name.includes('sideglass') ||
-                name.includes('phong4') ||
-                name.includes('phong13') ||
                 name.includes('toner'));
 
             if (isWindowGlass) {
@@ -594,6 +721,9 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               });
               mesh.castShadow = true;
               mesh.receiveShadow = true;
+              if (!name.includes('chmsl')) {
+                registerPanelMesh(mesh, 'taillights');
+              }
               return;
             }
 
@@ -652,8 +782,24 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
             if (name.includes('paint_geo_loda') || name.includes('paint_material')) { paintMeshesToSplit.push(mesh); return; }
 
             // 8. Golf GTI MK7 (golf_gti_mk7.glb) & Generic Paint Meshes
-            if (name.includes('phong2') || (name.includes('carpaint') && !name.includes('phong3') && !name.includes('trim') && !name.includes('hinges'))) {
+            if (
+              name.includes('phong2sg1') ||
+              name.includes('phong10sg1') ||
+              name.includes('phong11sg1') ||
+              (name.includes('carpaint') &&
+                !name.includes('phong3') &&
+                !name.includes('trim') &&
+                !name.includes('hinges') &&
+                !name.includes('rim') &&
+                !name.includes('wheel'))
+            ) {
               paintMeshesToSplit.push(mesh);
+              return;
+            }
+
+            // Golf GTI MK7 Reflective Mirror Lens (el espejo como tal — NO seleccionable)
+            if (name.includes('phong16sg1')) {
+              mesh.userData = { isPanel: false };
               return;
             }
 
@@ -782,7 +928,7 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
   };
 
   // Camera presets
-  const setCameraAngle = (view: 'iso' | 'front' | 'side' | 'rear' | 'top') => {
+  const setCameraAngle = useCallback((view: 'iso' | 'front' | 'side' | 'rear' | 'top') => {
     if (!cameraRef.current || !controlsRef.current) return;
     const camera = cameraRef.current;
     const controls = controlsRef.current;
@@ -811,22 +957,27 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
         break;
     }
     controls.update();
-  };
+  }, []);
+
+  // Listen for interactive Demo Tour camera/rotation commands
+  useEffect(() => {
+    const handleDemoAction = (e: Event) => {
+      const detail = (e as CustomEvent<{ type: string; cameraAngle?: 'iso' | 'front' | 'side' | 'rear' | 'top'; rotate?: boolean }>).detail;
+      if (!detail) return;
+      if (detail.type === 'SHOWROOM_CAMERA' && detail.cameraAngle) {
+        setCameraAngle(detail.cameraAngle);
+      } else if (detail.type === 'SHOWROOM_ROTATE' && typeof detail.rotate === 'boolean') {
+        setIsRotating(detail.rotate);
+      }
+    };
+    window.addEventListener('armorcut:demo-action', handleDemoAction);
+    return () => window.removeEventListener('armorcut:demo-action', handleDemoAction);
+  }, [setCameraAngle]);
 
   const hoveredMeta = hoveredPanelId ? STANDARD_PANELS.find((p) => p.id === hoveredPanelId) : null;
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '620px',
-        background: '#07090e',
-        borderRadius: '16px',
-        overflow: 'hidden',
-        userSelect: 'none',
-      }}
-    >
+    <div className="showroom-viewport">
       {/* Three.js Canvas Container */}
       <div
         ref={mountRef}
@@ -843,31 +994,59 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
       {/* Loading Overlay */}
       {isLoading && (
         <div
+          aria-live="polite"
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(7, 9, 14, 0.88)',
+            background: 'rgba(9, 10, 13, 0.9)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '12px',
-            backdropFilter: 'blur(8px)',
+            gap: '10px',
+            backdropFilter: 'blur(4px)',
             zIndex: 10,
           }}
         >
           <div
             style={{
-              width: '42px',
-              height: '42px',
-              border: '3px solid rgba(225, 29, 72, 0.2)',
-              borderTopColor: 'var(--accent-red)',
+              width: '28px',
+              height: '28px',
+              border: '2px solid rgba(255, 255, 255, 0.12)',
+              borderTopColor: '#ffffff',
               borderRadius: '50%',
               animation: 'spin 0.8s linear infinite',
             }}
           />
-          <div style={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}>
-            Cargando Carrocería 3D ({loadProgress}%)
+          <div className="mono" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+            Cargando modelo 3D · {loadProgress}%
+          </div>
+        </div>
+      )}
+
+      {/* Load Error Overlay */}
+      {loadError && !isLoading && (
+        <div
+          role="alert"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(9, 10, 13, 0.94)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            padding: '24px',
+            textAlign: 'center',
+            zIndex: 10,
+          }}
+        >
+          <div style={{ color: '#f87171', fontSize: '0.85rem', fontWeight: 600 }}>
+            {loadError}
+          </div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+            Verifica la disponibilidad del modelo GLB o cambia al Plano 2D.
           </div>
         </div>
       )}
@@ -893,11 +1072,11 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
           <div
             style={{
               display: 'flex',
-              gap: '4px',
-              background: 'rgba(12, 14, 20, 0.85)',
-              padding: '3px',
-              borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.08)',
+              gap: '2px',
+              background: 'rgba(14, 16, 20, 0.88)',
+              padding: '2px',
+              borderRadius: '6px',
+              border: '1px solid var(--border-card)',
               backdropFilter: 'blur(6px)',
             }}
           >
@@ -908,11 +1087,11 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
                 onClick={() => setCameraAngle(view)}
                 style={{
                   padding: '4px 10px',
-                  borderRadius: '5px',
-                  fontSize: '11px',
-                  fontWeight: activeCameraAngle === view ? 700 : 500,
-                  color: activeCameraAngle === view ? '#ffffff' : '#94a3b8',
-                  background: activeCameraAngle === view ? 'rgba(255,255,255,0.12)' : 'transparent',
+                  borderRadius: '4px',
+                  fontSize: '0.7rem',
+                  fontWeight: activeCameraAngle === view ? 600 : 500,
+                  color: activeCameraAngle === view ? '#ffffff' : 'var(--text-secondary)',
+                  background: activeCameraAngle === view ? 'var(--bg-card-hover)' : 'transparent',
                   border: 'none',
                   cursor: 'pointer',
                 }}
@@ -929,15 +1108,14 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
 
         {/* Right: PPF Film Finish & Turntable Rotation */}
         <div style={{ display: 'flex', gap: '8px', pointerEvents: 'auto' }}>
-          {/* PPF Finish Switch */}
           <div
             style={{
               display: 'flex',
-              gap: '4px',
-              background: 'rgba(12, 14, 20, 0.85)',
-              padding: '3px',
-              borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.08)',
+              gap: '2px',
+              background: 'rgba(14, 16, 20, 0.88)',
+              padding: '2px',
+              borderRadius: '6px',
+              border: '1px solid var(--border-card)',
               backdropFilter: 'blur(6px)',
             }}
           >
@@ -946,36 +1124,35 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               onClick={() => setPpfFinish('GLOSS')}
               style={{
                 padding: '4px 10px',
-                borderRadius: '5px',
-                fontSize: '11px',
-                fontWeight: 700,
-                color: ppfFinish === 'GLOSS' ? '#ffffff' : '#8893a4',
-                background: ppfFinish === 'GLOSS' ? 'var(--accent-red)' : 'transparent',
+                borderRadius: '4px',
+                fontSize: '0.7rem',
+                fontWeight: ppfFinish === 'GLOSS' ? 600 : 500,
+                color: ppfFinish === 'GLOSS' ? '#ffffff' : 'var(--text-secondary)',
+                background: ppfFinish === 'GLOSS' ? 'var(--bg-card-hover)' : 'transparent',
                 border: 'none',
                 cursor: 'pointer',
               }}
             >
-              PPF Gloss
+              Gloss
             </button>
             <button
               type="button"
               onClick={() => setPpfFinish('MATTE')}
               style={{
                 padding: '4px 10px',
-                borderRadius: '5px',
-                fontSize: '11px',
-                fontWeight: 700,
-                color: ppfFinish === 'MATTE' ? '#ffffff' : '#8893a4',
-                background: ppfFinish === 'MATTE' ? '#334155' : 'transparent',
+                borderRadius: '4px',
+                fontSize: '0.7rem',
+                fontWeight: ppfFinish === 'MATTE' ? 600 : 500,
+                color: ppfFinish === 'MATTE' ? '#ffffff' : 'var(--text-secondary)',
+                background: ppfFinish === 'MATTE' ? 'var(--bg-card-hover)' : 'transparent',
                 border: 'none',
                 cursor: 'pointer',
               }}
             >
-              PPF Matte
+              Matte
             </button>
           </div>
 
-          {/* Auto Rotation Button */}
           <button
             type="button"
             onClick={() => setIsRotating(!isRotating)}
@@ -983,138 +1160,96 @@ export const Vehicle3DShowroom: React.FC<Vehicle3DShowroomProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              fontSize: '11px',
-              fontWeight: 600,
-              color: isRotating ? '#ffffff' : '#8893a4',
-              background: isRotating ? 'var(--accent-red-subtle)' : 'rgba(12, 14, 20, 0.85)',
-              border: `1px solid ${isRotating ? 'var(--accent-red-border)' : 'rgba(255,255,255,0.08)'}`,
+              padding: '5px 10px',
+              borderRadius: '6px',
+              fontSize: '0.7rem',
+              fontWeight: 500,
+              color: isRotating ? '#ffffff' : 'var(--text-secondary)',
+              background: isRotating ? 'var(--bg-card-hover)' : 'rgba(14, 16, 20, 0.88)',
+              border: `1px solid ${isRotating ? 'var(--text-secondary)' : 'var(--border-card)'}`,
               cursor: 'pointer',
               backdropFilter: 'blur(6px)',
             }}
           >
-            <RotateCw style={{ width: 13, height: 13 }} />
-            {isRotating ? 'Pausar Giro' : 'Girar 360°'}
+            <RotateCw style={{ width: 12, height: 12 }} />
+            <span>{isRotating ? 'Pausar' : 'Rotar'}</span>
           </button>
         </div>
       </div>
 
-      {/* Floating Technical HUD Hover Badge */}
+      {/* Minimalist Architectural Hover HUD */}
       {hoveredMeta && (
         <div
           style={{
             position: 'absolute',
-            bottom: 40,
-            left: 20,
-            background: 'rgba(9, 12, 19, 0.94)',
-            border: '1px solid var(--accent-red-border)',
-            borderRadius: '12px',
-            padding: '12px 18px',
-            boxShadow: '0 12px 36px rgba(0,0,0,0.7)',
-            backdropFilter: 'blur(12px)',
+            bottom: 36,
+            left: 14,
+            background: 'rgba(14, 16, 20, 0.94)',
+            border: '1px solid var(--border-highlight)',
+            borderRadius: '6px',
+            padding: '12px 16px',
+            backdropFilter: 'blur(8px)',
             pointerEvents: 'none',
             zIndex: 10,
-            maxWidth: '340px',
-            animation: 'fadeIn 0.15s ease-out',
+            minWidth: '240px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-            <span
-              style={{
-                fontSize: '10px',
-                fontFamily: 'var(--font-mono)',
-                color: 'var(--accent-red)',
-                letterSpacing: '0.08em',
-                fontWeight: 700,
-              }}
-            >
-              PANEL DETECTADO
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#ffffff' }}>
+              {hoveredMeta.spanishName || hoveredMeta.name}
             </span>
             <span
+              className="mono"
               style={{
-                fontSize: '10px',
-                fontWeight: 700,
-                padding: '2px 8px',
-                borderRadius: '4px',
-                background: selectedPanelIds.includes(hoveredMeta.id) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(100, 116, 139, 0.2)',
-                color: selectedPanelIds.includes(hoveredMeta.id) ? '#34d399' : '#cbd5e1',
-                border: `1px solid ${selectedPanelIds.includes(hoveredMeta.id) ? '#10b981' : '#475569'}`,
+                fontSize: '0.62rem',
+                fontWeight: 600,
+                padding: '1px 6px',
+                borderRadius: '3px',
+                background: selectedPanelIds.includes(hoveredMeta.id)
+                  ? 'var(--accent-red)'
+                  : 'var(--bg-card)',
+                color: '#ffffff',
+                textTransform: 'uppercase',
               }}
             >
-              {selectedPanelIds.includes(hoveredMeta.id) ? '✓ CUBIERTO' : 'DISPONIBLE'}
+              {selectedPanelIds.includes(hoveredMeta.id) ? 'Seleccionado' : 'Disponible'}
             </span>
           </div>
 
-          <div style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff', marginTop: '4px' }}>
-            {hoveredMeta.spanishName || hoveredMeta.name}
-          </div>
-
           <div
+            className="mono"
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '6px 14px',
-              marginTop: '10px',
-              fontSize: '11px',
-              color: '#94a3b8',
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-              paddingTop: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginTop: '6px',
+              fontSize: '0.7rem',
+              color: 'var(--text-secondary)',
             }}
           >
-            <div>
-              Medida Paño:{' '}
-              <strong style={{ color: '#ffffff', fontFamily: 'var(--font-mono)' }}>
-                {hoveredMeta.cutWidth}m × {hoveredMeta.cutLength}m
-              </strong>
-            </div>
-            <div>
-              Superficie:{' '}
-              <strong style={{ color: '#ffffff', fontFamily: 'var(--font-mono)' }}>
-                {hoveredMeta.sqMeters} m²
-              </strong>
-            </div>
-            <div>
-              Instalación:{' '}
-              <strong style={{ color: '#ffffff' }}>
-                {hoveredMeta.laborHours}h ({hoveredMeta.difficulty})
-              </strong>
-            </div>
-            <div>
-              Margen Remetido:{' '}
-              <strong style={{ color: '#ffffff' }}>
-                +{hoveredMeta.wrappedMarginMm || 20} mm
-              </strong>
-            </div>
-          </div>
-
-          <div
-            style={{
-              marginTop: '8px',
-              fontSize: '10px',
-              color: selectedPanelIds.includes(hoveredMeta.id) ? '#fda4af' : '#38bdf8',
-              fontStyle: 'italic',
-            }}
-          >
-            Haz click para {selectedPanelIds.includes(hoveredMeta.id) ? 'quitar' : 'añadir'} este panel
+            <span>{hoveredMeta.cutWidth} × {hoveredMeta.cutLength}m</span>
+            <span>·</span>
+            <span>{hoveredMeta.sqMeters} m²</span>
+            <span>·</span>
+            <span>{hoveredMeta.laborHours}h</span>
           </div>
         </div>
       )}
 
-      {/* Floating 3D Instructions Footer */}
+      {/* Subtle Bottom Controls Hint */}
       <div
+        className="mono"
         style={{
           position: 'absolute',
-          bottom: 14,
+          bottom: 12,
           left: 14,
-          fontSize: '10px',
-          fontFamily: 'var(--font-mono)',
-          color: 'rgba(255, 255, 255, 0.35)',
+          fontSize: '0.62rem',
+          color: 'rgba(255, 255, 255, 0.28)',
           pointerEvents: 'none',
           letterSpacing: '0.04em',
         }}
       >
-        CLICK EN CUALQUIER PIEZA PARA SELECCIONAR CORTE · ARRASTRA PARA ROTAR 360° · RUEDA PARA ZOOM
+        CLICK PARA SELECCIONAR PIEZA · ARRASTRAR PARA ROTAR · SCROLL PARA ZOOM
       </div>
     </div>
   );

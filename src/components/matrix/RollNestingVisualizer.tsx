@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { PPFRoll, VehiclePanel, NestingResult } from '@/types/ppf';
-import { Scissors, AlertCircle, CheckCircle2, TrendingUp, Layers } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 interface RollNestingVisualizerProps {
   selectedPanels: VehiclePanel[];
@@ -29,120 +29,126 @@ export const RollNestingVisualizer: React.FC<RollNestingVisualizerProps> = ({
   return (
     <div
       style={{
-        background: '#0d1017',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '12px',
-        padding: '18px 20px',
+        background: 'var(--bg-card)',
+        padding: '16px 20px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '14px',
+        gap: '12px',
       }}
     >
-      {/* Top Header & Metrics Bar */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '14px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span
-              style={{
-                fontSize: '11px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: 'var(--accent-red)',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <Scissors style={{ width: 14, height: 14 }} />
-              Simulador de Anidado en Bobina 1.52m (60")
-            </span>
-            <span
-              style={{
-                fontSize: '10px',
-                fontFamily: 'var(--font-mono)',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                color: '#10b981',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                fontWeight: 600,
-              }}
-            >
-              Rendimiento: {nesting.efficiencyPercent}%
-            </span>
-          </div>
-          <h4 style={{ fontSize: '13px', fontWeight: 600, color: '#ffffff', margin: 0 }}>
-            Distribución física y optimización sobre el rollo de film
-          </h4>
+      {/* Top Bar */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span
+            className="mono"
+            style={{
+              fontSize: '0.7rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              color: 'var(--text-secondary)',
+              fontWeight: 600,
+            }}
+          >
+            Anidado en Bobina 1.52m
+          </span>
+          <span
+            className="mono"
+            style={{
+              fontSize: '0.68rem',
+              padding: '1px 6px',
+              borderRadius: '3px',
+              background: 'var(--bg-surface)',
+              color: 'var(--text-muted)',
+              border: '1px solid var(--border-card)',
+            }}
+          >
+            Eficiencia {nesting.efficiencyPercent}%
+          </span>
         </div>
 
-        {/* Workshop Stock Badges */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
-          {/* Active Roll Selector */}
+        {/* Roll Telemetry */}
+        <div
+          className="mono"
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '0.72rem',
+          }}
+        >
           {availableRolls.length > 0 && onSelectRoll && (
-            <div style={{ background: '#07090e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '4px 10px' }}>
-              <span style={{ color: '#626d7d', fontSize: '10px', display: 'block' }}>Bobina Asignada:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Bobina:</span>
               <select
                 value={activeRoll?.id || ''}
                 onChange={(e) => onSelectRoll(e.target.value)}
                 style={{
-                  background: 'transparent',
-                  color: '#ffffff',
-                  border: 'none',
+                  background: 'var(--bg-surface)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-card)',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
                   outline: 'none',
-                  fontSize: '11px',
-                  fontWeight: 600,
+                  fontSize: '0.72rem',
+                  fontFamily: 'var(--font-mono)',
                   cursor: 'pointer',
                 }}
               >
                 {availableRolls.map((r) => (
-                  <option key={r.id} value={r.id} style={{ background: '#12151e' }}>
-                    {r.code} - {r.brand} ({r.currentMeters.toFixed(1)}m)
+                  <option key={r.id} value={r.id} style={{ background: '#12141a' }}>
+                    {r.code} · {r.brand} ({r.currentMeters.toFixed(1)}m)
                   </option>
                 ))}
               </select>
             </div>
           )}
 
-          <div style={{ background: '#07090e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '4px 10px' }}>
-            <span style={{ color: '#626d7d', fontSize: '10px', display: 'block' }}>Disponible:</span>
-            <span style={{ color: '#ffffff', fontWeight: 700 }}>{rollRemaining.toFixed(2)} m</span>
+          <div>
+            <span style={{ color: 'var(--text-muted)' }}>Disp: </span>
+            <strong style={{ color: 'var(--text-primary)' }}>{rollRemaining.toFixed(2)}m</strong>
           </div>
 
-          <div style={{ background: '#07090e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '4px 10px' }}>
-            <span style={{ color: '#626d7d', fontSize: '10px', display: 'block' }}>Consumo Orden:</span>
-            <span style={{ color: 'var(--accent-red)', fontWeight: 700 }}>-{billedLinearMeters.toFixed(2)} m</span>
+          <div>
+            <span style={{ color: 'var(--text-muted)' }}>Corte: </span>
+            <strong style={{ color: 'var(--text-primary)' }}>-{billedLinearMeters.toFixed(2)}m</strong>
           </div>
 
-          <div style={{ background: '#07090e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '4px 10px' }}>
-            <span style={{ color: '#626d7d', fontSize: '10px', display: 'block' }}>Remanente:</span>
-            <span style={{ color: isExceeded ? '#ef4444' : '#10b981', fontWeight: 700 }}>
-              {remainingAfterCut.toFixed(2)} m
-            </span>
+          <div>
+            <span style={{ color: 'var(--text-muted)' }}>Resto: </span>
+            <strong style={{ color: isExceeded ? 'var(--color-danger)' : 'var(--text-primary)' }}>
+              {remainingAfterCut.toFixed(2)}m
+            </strong>
           </div>
         </div>
       </div>
 
-      {/* Stock Exceeded Alert */}
       {isExceeded && (
         <div
           style={{
-            padding: '10px 14px',
-            borderRadius: '8px',
-            background: 'rgba(239, 68, 68, 0.12)',
+            padding: '8px 12px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--color-danger-bg)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
             color: '#fca5a5',
-            fontSize: '12px',
+            fontSize: '0.75rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '8px',
           }}
         >
-          <AlertCircle style={{ width: 16, height: 16, flexShrink: 0, color: '#ef4444' }} />
+          <AlertCircle size={14} color="#ef4444" />
           <span>
-            <strong>Capacidad insuficiente:</strong> Se requieren {billedLinearMeters.toFixed(2)}m y la bobina activa solo dispone de {rollRemaining.toFixed(2)}m. Se precisará una bobina adicional.
+            Stock insuficiente en bobina seleccionada ({rollRemaining.toFixed(2)}m disponibles para{' '}
+            {billedLinearMeters.toFixed(2)}m requeridos).
           </span>
         </div>
       )}
@@ -150,59 +156,70 @@ export const RollNestingVisualizer: React.FC<RollNestingVisualizerProps> = ({
       {/* Physical Roll Diagram */}
       <div
         style={{
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '8px',
-          background: '#07090e',
-          padding: '12px',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--bg-main)',
+          padding: '10px 12px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '6px',
         }}
       >
-        {/* Ruler tick marks */}
         <div
+          className="mono"
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            fontSize: '9px',
-            fontFamily: 'var(--font-mono)',
-            color: '#626d7d',
-            paddingBottom: '4px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+            fontSize: '0.62rem',
+            color: 'var(--text-muted)',
           }}
         >
-          <span>0.0m (Comienzo Bobina)</span>
+          <span>0.0m</span>
           <span>3.0m</span>
           <span>6.0m</span>
           <span>9.0m</span>
           <span>12.0m</span>
-          <span>15.0m (Fin Bobina)</span>
+          <span>15.0m</span>
         </div>
 
-        {/* Physical Roll Strip */}
         <div
           style={{
             position: 'relative',
-            height: '92px',
+            height: '68px',
             width: '100%',
-            background: '#0a0d14',
-            borderRadius: '6px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'var(--bg-surface)',
+            borderRadius: '4px',
+            border: '1px solid var(--border-card)',
             display: 'flex',
             overflow: 'hidden',
           }}
         >
-          {/* Meter grid marks */}
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', pointerEvents: 'none', opacity: 0.15 }}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              pointerEvents: 'none',
+              opacity: 0.08,
+            }}
+          >
             {Array.from({ length: 15 }).map((_, i) => (
               <div key={i} style={{ flex: 1, borderRight: '1px solid #ffffff' }} />
             ))}
           </div>
 
-          {/* Placed Panels Strip */}
           {selectedPanels.length === 0 ? (
-            <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#626d7d' }}>
-              Selecciona paneles en la maqueta 3D o en el plano CAD para visualizar los cortes anidados en la bobina
+            <div
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.72rem',
+                color: 'var(--text-muted)',
+              }}
+            >
+              Sin piezas seleccionadas
             </div>
           ) : (
             <div
@@ -216,12 +233,6 @@ export const RollNestingVisualizer: React.FC<RollNestingVisualizerProps> = ({
               {selectedPanels.map((panel, idx) => {
                 const totalLen = selectedPanels.reduce((s, p) => s + p.cutLength, 0) || 1;
                 const widthPct = (panel.cutLength / totalLen) * 100;
-                const bgStyles = [
-                  { bg: 'rgba(230, 25, 55, 0.35)', border: 'rgba(230, 25, 55, 0.7)', text: '#ffffff' },
-                  { bg: 'rgba(184, 12, 37, 0.45)', border: 'rgba(230, 25, 55, 0.5)', text: '#ffb3bd' },
-                  { bg: 'rgba(30, 41, 59, 0.65)', border: 'rgba(255, 255, 255, 0.2)', text: '#cbd5e1' },
-                ];
-                const style = bgStyles[idx % bgStyles.length];
 
                 return (
                   <div
@@ -229,23 +240,36 @@ export const RollNestingVisualizer: React.FC<RollNestingVisualizerProps> = ({
                     style={{
                       width: `${Math.max(6, widthPct)}%`,
                       height: '100%',
-                      background: style.bg,
-                      borderRight: `1px solid ${style.border}`,
-                      padding: '6px 8px',
+                      background: idx % 2 === 0 ? '#181b23' : '#14171e',
+                      borderRight: '1px solid var(--border-highlight)',
+                      padding: '5px 7px',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
                       overflow: 'hidden',
-                      transition: 'all 0.15s ease',
                     }}
-                    title={`${panel.name} (${panel.cutLength}m x ${panel.cutWidth}m) - Dificultad: ${panel.difficulty}`}
+                    title={`${panel.name} (${panel.cutLength}m × ${panel.cutWidth}m)`}
                   >
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: style.text, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
+                      }}
+                    >
                       {panel.name}
                     </div>
-                    <div style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#9aa4b2', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{panel.cutLength}m</span>
-                      <span>{panel.cutWidth}m</span>
+                    <div
+                      className="mono"
+                      style={{
+                        fontSize: '0.6rem',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
+                      {panel.cutLength}m
                     </div>
                   </div>
                 );
@@ -253,39 +277,20 @@ export const RollNestingVisualizer: React.FC<RollNestingVisualizerProps> = ({
             </div>
           )}
 
-          {/* Roll Remainder Area */}
           <div
             style={{
               flex: 1,
-              background: '#07090e',
-              borderLeft: '1px dashed rgba(255, 255, 255, 0.15)',
+              background: 'var(--bg-main)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               padding: '0 12px',
             }}
           >
-            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#626d7d', textAlign: 'center' }}>
-              Bobina remanente limpia: {remainingAfterCut.toFixed(2)}m
+            <span className="mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+              Remanente: {remainingAfterCut.toFixed(2)}m
             </span>
           </div>
-        </div>
-
-        {/* Legend */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '10px', color: '#626d7d', paddingTop: '4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(230, 25, 55, 0.5)', border: '1px solid var(--accent-red)' }} />
-              Patrones de corte en bobina
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: '#0a0d14', border: '1px solid rgba(255,255,255,0.1)' }} />
-              Film virgen en stock
-            </span>
-          </div>
-          <span style={{ fontFamily: 'var(--font-mono)' }}>
-            Estándar Industrial: 1.52m ancho × 15.0m longitud (60" x 50ft)
-          </span>
         </div>
       </div>
     </div>

@@ -1,657 +1,657 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { VehicleProfile, VehicleCategory } from '@/types/ppf';
 import {
   Search,
-  Filter,
-  Car,
-  Calendar,
-  Layers,
-  ArrowRight,
-  Sparkles,
-  Check,
+  ArrowUpRight,
+  ArrowLeft,
   X,
   RotateCcw,
-  SlidersHorizontal,
 } from 'lucide-react';
 
 interface VehicleCatalogSelectorProps {
   vehicles: VehicleProfile[];
+  initialBrand?: string | null;
   onSelectVehicle: (vehicleId: string) => void;
 }
 
 const CATEGORY_LABELS: Record<VehicleCategory, string> = {
-  HATCHBACK: 'Hatchback Deportivo',
-  SUV: 'SUV / 4x4 Todo Terreno',
-  COUPE_SUPERCAR: 'Coupé Supercar',
+  HATCHBACK: 'Hatchback',
+  SUV: 'SUV',
+  COUPE_SUPERCAR: 'Coupé',
   SEDAN: 'Sedán',
   PICKUP: 'Pick-up',
 };
 
+export const BRAND_LOGOS: Record<string, string> = {
+  Audi: '/brands/audi.png',
+  BMW: '/brands/bmw.png',
+  Chevrolet: '/brands/chevrolet.png',
+  Ford: '/brands/ford.png',
+  Jeep: '/brands/jeep.png',
+  'Mercedes-Benz': '/brands/mercedes-benz.png',
+  Peugeot: '/brands/peugeot.png',
+  Renault: '/brands/renault.png',
+  Toyota: '/brands/toyota.png',
+  Volkswagen: '/brands/volkswagen.png',
+};
+
 export const VehicleCatalogSelector: React.FC<VehicleCatalogSelectorProps> = ({
   vehicles,
+  initialBrand = null,
   onSelectVehicle,
 }) => {
+  const [activeBrand, setActiveBrand] = useState<string | null>(initialBrand);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBrand, setSelectedBrand] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedYear, setSelectedYear] = useState('ALL');
 
-  // Extract unique brands and years dynamically
-  const uniqueBrands = useMemo(() => {
-    return Array.from(new Set(vehicles.map((v) => v.brand))).sort();
+  useEffect(() => {
+    setActiveBrand(initialBrand);
+    setSearchQuery('');
+    setSelectedCategory('ALL');
+    setSelectedYear('ALL');
+  }, [initialBrand]);
+
+  // Group vehicles by brand, including all registered brands in BRAND_LOGOS
+  const brandsSummary = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        brand: string;
+        logo: string;
+        models: VehicleProfile[];
+      }
+    >();
+
+    Object.entries(BRAND_LOGOS).forEach(([brand, logo]) => {
+      map.set(brand, {
+        brand,
+        logo,
+        models: [],
+      });
+    });
+
+    vehicles.forEach((v) => {
+      if (!map.has(v.brand)) {
+        map.set(v.brand, {
+          brand: v.brand,
+          logo: BRAND_LOGOS[v.brand] || '',
+          models: [],
+        });
+      }
+      map.get(v.brand)!.models.push(v);
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.brand.localeCompare(b.brand));
   }, [vehicles]);
 
-  const uniqueYears = useMemo(() => {
-    return Array.from(new Set(vehicles.map((v) => v.year))).sort((a, b) => b - a);
-  }, [vehicles]);
+  // Filtered brands when on the Brand Catalog view
+  const filteredBrands = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return brandsSummary;
+    return brandsSummary.filter(
+      (b) =>
+        b.brand.toLowerCase().includes(q) ||
+        b.models.some(
+          (m) =>
+            m.name.toLowerCase().includes(q) ||
+            m.year.toString().includes(q)
+        )
+    );
+  }, [brandsSummary, searchQuery]);
 
-  const uniqueCategories = useMemo(() => {
-    return Array.from(new Set(vehicles.map((v) => v.category))).sort();
-  }, [vehicles]);
+  // Vehicles for the currently selected brand
+  const brandVehicles = useMemo(() => {
+    if (!activeBrand) return [];
+    return vehicles.filter((v) => v.brand === activeBrand);
+  }, [vehicles, activeBrand]);
 
-  // Filter vehicles
-  const filteredVehicles = useMemo(() => {
-    return vehicles.filter((v) => {
-      // Text search
+  const uniqueYearsForBrand = useMemo(() => {
+    return Array.from(new Set(brandVehicles.map((v) => v.year))).sort((a, b) => b - a);
+  }, [brandVehicles]);
+
+  const uniqueCategoriesForBrand = useMemo(() => {
+    return Array.from(new Set(brandVehicles.map((v) => v.category))).sort();
+  }, [brandVehicles]);
+
+  const filteredBrandVehicles = useMemo(() => {
+    return brandVehicles.filter((v) => {
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
         v.name.toLowerCase().includes(q) ||
-        v.brand.toLowerCase().includes(q) ||
-        v.badge.toLowerCase().includes(q) ||
-        v.year.toString().includes(q) ||
-        v.features.some((f) => f.toLowerCase().includes(q));
+        v.year.toString().includes(q);
 
-      // Brand filter
-      const matchesBrand = selectedBrand === 'ALL' || v.brand === selectedBrand;
-
-      // Category filter
       const matchesCategory = selectedCategory === 'ALL' || v.category === selectedCategory;
-
-      // Year filter
       const matchesYear = selectedYear === 'ALL' || v.year.toString() === selectedYear;
 
-      return matchesSearch && matchesBrand && matchesCategory && matchesYear;
+      return matchesSearch && matchesCategory && matchesYear;
     });
-  }, [vehicles, searchQuery, selectedBrand, selectedCategory, selectedYear]);
+  }, [brandVehicles, searchQuery, selectedCategory, selectedYear]);
 
-  const hasActiveFilters =
-    searchQuery.trim() !== '' ||
-    selectedBrand !== 'ALL' ||
-    selectedCategory !== 'ALL' ||
-    selectedYear !== 'ALL';
-
-  const handleResetFilters = () => {
+  const handleOpenBrand = (brand: string) => {
+    setActiveBrand(brand);
     setSearchQuery('');
-    setSelectedBrand('ALL');
     setSelectedCategory('ALL');
     setSelectedYear('ALL');
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Supercar Header Banner */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, rgba(13, 16, 23, 0.95) 0%, rgba(18, 22, 33, 0.85) 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '16px',
-          padding: '24px 28px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-        }}
-      >
-        {/* Subtle accent glow */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '-40px',
-            right: '-40px',
-            width: '200px',
-            height: '200px',
-            background: 'radial-gradient(circle, rgba(225, 29, 72, 0.15) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
+  const handleBackToBrands = () => {
+    setActiveBrand(null);
+    setSearchQuery('');
+    setSelectedCategory('ALL');
+    setSelectedYear('ALL');
+  };
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <span
-            style={{
-              fontSize: '11px',
-              fontFamily: 'var(--font-mono)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              color: 'var(--accent-red)',
-              background: 'rgba(230, 25, 55, 0.12)',
-              border: '1px solid rgba(230, 25, 55, 0.25)',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              fontWeight: 700,
-            }}
-          >
-            Studio CAD • Catálogo de Vehículos
-          </span>
-          <span
-            style={{
-              fontSize: '12px',
-              color: '#94a3b8',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span
+  /* ============================================================================
+     VIEW 1: BRAND CATALOG (CATÁLOGO DE MARCAS)
+     ============================================================================ */
+  if (!activeBrand) {
+    return (
+      <div>
+        {/* Header Bar */}
+        <div className="section-header">
+          <div>
+            <div
+              className="mono"
               style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: '#10b981',
-                boxShadow: '0 0 8px #10b981',
+                fontSize: 'var(--text-xs)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: 'var(--text-muted)',
+                marginBottom: '4px',
               }}
-            />
-            4 Modelos 3D Optimizados Disponibles
-          </span>
-        </div>
+            >
+              STUDIO / SELECCIÓN DE MARCA
+            </div>
+            <h1 style={{ fontSize: 'var(--text-xl)', margin: 0 }}>
+              Catálogo de Marcas
+            </h1>
+          </div>
 
-        <div>
-          <h1
-            style={{
-              fontSize: '26px',
-              fontWeight: 800,
-              color: '#ffffff',
-              margin: '0 0 6px 0',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Selecciona un Vehículo para Configurar PPF
-          </h1>
-          <p
-            style={{
-              fontSize: '14px',
-              color: '#94a3b8',
-              margin: 0,
-              maxWidth: '720px',
-              lineHeight: 1.5,
-            }}
-          >
-            Explora nuestra flota de modelos 3D con despiece de chapa paramétrico, simulación de
-            anidado de bobinas en tiempo real y cotización instantánea de protección automotriz.
-          </p>
-        </div>
-      </div>
-
-      {/* Search & Filter Toolbar */}
-      <div
-        style={{
-          background: 'rgba(13, 16, 23, 0.75)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '14px',
-          padding: '16px 20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-          backdropFilter: 'blur(10px)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
-          {/* Search Box */}
-          <div
-            style={{
-              position: 'relative',
-              flex: '1 1 280px',
-              maxWidth: '460px',
-            }}
-          >
+          {/* Search Input */}
+          <div className="filter-search-box" style={{ position: 'relative', width: '280px' }}>
             <Search
-              size={17}
+              size={14}
               color="var(--text-muted)"
-              style={{ position: 'absolute', left: '12px', top: '12px' }}
+              style={{ position: 'absolute', left: '12px', top: '11px' }}
             />
             <input
               type="text"
-              placeholder="Buscar por marca, modelo, versión (ej: Golf, M2, SW4)..."
+              aria-label="Buscar marca"
+              placeholder="Buscar marca..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
               style={{
-                width: '100%',
-                paddingLeft: '38px',
-                paddingRight: searchQuery ? '36px' : '12px',
-                background: 'rgba(7, 9, 14, 0.7)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: '#ffffff',
-                borderRadius: '8px',
+                paddingLeft: '34px',
+                paddingRight: searchQuery ? '30px' : '12px',
               }}
             />
             {searchQuery && (
               <button
+                type="button"
+                aria-label="Limpiar búsqueda"
                 onClick={() => setSearchQuery('')}
                 style={{
                   position: 'absolute',
-                  right: '10px',
-                  top: '10px',
+                  right: '8px',
+                  top: '9px',
                   background: 'transparent',
                   border: 'none',
-                  color: '#94a3b8',
+                  color: 'var(--text-muted)',
                   cursor: 'pointer',
-                  padding: '4px',
-                }}
-                title="Limpiar búsqueda"
-              >
-                <X size={15} />
-              </button>
-            )}
-          </div>
-
-          {/* Dropdown Filters Group */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              flexWrap: 'wrap',
-            }}
-          >
-            {/* Filter by Brand */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Marca:</span>
-              <select
-                className="form-select"
-                value={selectedBrand}
-                onChange={(e) => setSelectedBrand(e.target.value)}
-                style={{
-                  background: 'rgba(7, 9, 14, 0.7)',
-                  borderColor: selectedBrand !== 'ALL' ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.12)',
-                  color: '#ffffff',
-                  fontSize: '13px',
-                  padding: '7px 12px',
-                  borderRadius: '8px',
+                  padding: '2px',
                 }}
               >
-                <option value="ALL">Todas las Marcas</option>
-                {uniqueBrands.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filter by Category */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Tipo:</span>
-              <select
-                className="form-select"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                style={{
-                  background: 'rgba(7, 9, 14, 0.7)',
-                  borderColor: selectedCategory !== 'ALL' ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.12)',
-                  color: '#ffffff',
-                  fontSize: '13px',
-                  padding: '7px 12px',
-                  borderRadius: '8px',
-                }}
-              >
-                <option value="ALL">Todas las Carrocerías</option>
-                {uniqueCategories.map((c) => (
-                  <option key={c} value={c}>
-                    {CATEGORY_LABELS[c] || c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filter by Year */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Año:</span>
-              <select
-                className="form-select"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                style={{
-                  background: 'rgba(7, 9, 14, 0.7)',
-                  borderColor: selectedYear !== 'ALL' ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.12)',
-                  color: '#ffffff',
-                  fontSize: '13px',
-                  padding: '7px 12px',
-                  borderRadius: '8px',
-                }}
-              >
-                <option value="ALL">Todos los Años</option>
-                {uniqueYears.map((y) => (
-                  <option key={y} value={y.toString()}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Reset Filters button if any active */}
-            {hasActiveFilters && (
-              <button
-                onClick={handleResetFilters}
-                className="btn btn-secondary btn-sm"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 12px',
-                  fontSize: '12px',
-                  borderRadius: '8px',
-                  color: '#f87171',
-                  borderColor: 'rgba(248, 113, 113, 0.3)',
-                }}
-                title="Restablecer filtros"
-              >
-                <RotateCcw size={13} />
-                <span>Limpiar</span>
+                <X size={14} />
               </button>
             )}
           </div>
         </div>
 
-        {/* Counter feedback */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontSize: '12px',
-            color: '#64748b',
-            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-            paddingTop: '10px',
-          }}
-        >
-          <span>
-            Mostrando <strong style={{ color: '#ffffff' }}>{filteredVehicles.length}</strong> de{' '}
-            {vehicles.length} vehículos con soporte 3D
-          </span>
-          {hasActiveFilters && (
-            <span style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Filtros activos</span>
-          )}
-        </div>
-      </div>
-
-      {/* Empty State */}
-      {filteredVehicles.length === 0 ? (
-        <div
-          style={{
-            background: 'rgba(13, 16, 23, 0.6)',
-            border: '1px dashed rgba(255, 255, 255, 0.15)',
-            borderRadius: '16px',
-            padding: '50px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '14px',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              width: '54px',
-              height: '54px',
-              borderRadius: '50%',
-              background: 'rgba(230, 25, 55, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent-red)',
-            }}
-          >
-            <Car size={26} />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '17px', color: '#ffffff', margin: '0 0 6px 0' }}>
-              No se encontraron vehículos
-            </h3>
-            <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0, maxWidth: '420px' }}>
-              No hay modelos 3D que coincidan con los criterios de búsqueda seleccionados.
-            </p>
-          </div>
-          <button
-            onClick={handleResetFilters}
-            className="btn btn-primary btn-sm"
-            style={{ marginTop: '8px' }}
-          >
-            Restablecer Filtros
-          </button>
-        </div>
-      ) : (
-        /* Grid of Vehicle Cards */
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-            gap: '20px',
-          }}
-        >
-          {filteredVehicles.map((v) => (
-            <div
-              key={v.id}
-              onClick={() => onSelectVehicle(v.id)}
-              style={{
-                background: 'linear-gradient(180deg, rgba(13, 16, 23, 0.95) 0%, rgba(9, 11, 17, 0.98) 100%)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '16px',
-                padding: '22px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '18px',
-                cursor: 'pointer',
-                transition: 'all 0.22s ease-in-out',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(225, 29, 72, 0.5)';
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.boxShadow = '0 12px 30px rgba(225, 29, 72, 0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
+        {/* Brands Grid */}
+        {filteredBrands.length === 0 ? (
+          <div className="state-box">
+            <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Sin marcas que coincidan con &ldquo;{searchQuery}&rdquo;
+            </div>
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="btn btn-secondary btn-sm"
             >
-              {/* Header Badges */}
-              <div>
+              Ver todas las marcas
+            </button>
+          </div>
+        ) : (
+          <div className="brand-cards-grid">
+            {filteredBrands.map((b) => (
+              <div
+                key={b.brand}
+                role="button"
+                tabIndex={0}
+                onClick={() => handleOpenBrand(b.brand)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleOpenBrand(b.brand);
+                  }
+                }}
+                className="interactive-card"
+                style={{
+                  padding: 'var(--space-5)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-4)',
+                }}
+              >
+                {/* Logo Pedestal Stage */}
+                <div
+                  style={{
+                    height: '164px',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-md)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 'var(--space-6)',
+                  }}
+                >
+                  {b.logo ? (
+                    <img
+                      src={b.logo}
+                      alt={`Logo de ${b.brand}`}
+                      style={{
+                        maxHeight: '96px',
+                        maxWidth: '160px',
+                        objectFit: 'contain',
+                        display: 'block',
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: 'var(--text-xl)',
+                        fontWeight: 700,
+                        color: 'var(--text-primary)',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      {b.brand}
+                    </span>
+                  )}
+                </div>
+
+                {/* Clean Brand Name + Model Count Only */}
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: '8px',
-                    marginBottom: '10px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, margin: 0 }}>
+                    {b.brand}
+                  </h2>
+
+                  <span
+                    className="mono"
+                    style={{
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
+                    {b.models.length} {b.models.length === 1 ? 'modelo' : 'modelos'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ============================================================================
+     VIEW 2: SPECIFIC BRAND VEHICLE LIST (MODELOS DE LA MARCA)
+     ============================================================================ */
+  const hasBrandFilters =
+    searchQuery.trim() !== '' || selectedCategory !== 'ALL' || selectedYear !== 'ALL';
+
+  return (
+    <div>
+      {/* Brand Header Bar with Back Navigation */}
+      <div className="section-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleBackToBrands}
+            className="btn btn-secondary btn-sm"
+          >
+            <ArrowLeft size={13} />
+            <span>Marcas</span>
+          </button>
+
+          <div style={{ width: '1px', height: '24px', background: 'var(--border-card)' }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            {BRAND_LOGOS[activeBrand] && (
+              <img
+                src={BRAND_LOGOS[activeBrand]}
+                alt={activeBrand}
+                style={{
+                  height: '32px',
+                  width: '32px',
+                  objectFit: 'contain',
+                }}
+              />
+            )}
+            <div>
+              <div
+                className="mono"
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                {brandVehicles.length} {brandVehicles.length === 1 ? 'MODELO' : 'MODELOS'}
+              </div>
+              <h1 style={{ fontSize: 'var(--text-xl)', margin: 0 }}>
+                {activeBrand}
+              </h1>
+            </div>
+          </div>
+        </div>
+
+        {/* Inline Filters for Selected Brand */}
+        <div
+          className="filter-controls-row"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div className="filter-search-box" style={{ position: 'relative', width: '240px' }}>
+            <Search
+              size={14}
+              color="var(--text-muted)"
+              style={{ position: 'absolute', left: '12px', top: '11px' }}
+            />
+            <input
+              type="text"
+              aria-label={`Buscar modelo en ${activeBrand}`}
+              placeholder={`Buscar en ${activeBrand}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="form-input"
+              style={{
+                paddingLeft: '34px',
+                paddingRight: searchQuery ? '30px' : '12px',
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                aria-label="Limpiar búsqueda"
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '9px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '2px',
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <select
+            aria-label="Filtrar por carrocería"
+            className="form-select"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            style={{ width: 'auto' }}
+          >
+            <option value="ALL">Carrocería: Todas</option>
+            {uniqueCategoriesForBrand.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_LABELS[c] || c}
+              </option>
+            ))}
+          </select>
+
+          <select
+            aria-label="Filtrar por año"
+            className="form-select"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            style={{ width: 'auto' }}
+          >
+            <option value="ALL">Año: Todos</option>
+            {uniqueYearsForBrand.map((y) => (
+              <option key={y} value={y.toString()}>
+                {y}
+              </option>
+            ))}
+          </select>
+
+          {hasBrandFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('ALL');
+                setSelectedYear('ALL');
+              }}
+              className="btn btn-secondary btn-sm"
+            >
+              <RotateCcw size={12} />
+              <span>Limpiar</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Vehicle List for Brand */}
+      {filteredBrandVehicles.length === 0 ? (
+        <div className="state-box">
+          <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)' }}>
+            {brandVehicles.length === 0
+              ? `Sin modelos cargados para ${activeBrand} todavía`
+              : `Sin modelos de ${activeBrand} para este filtro`}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (brandVehicles.length === 0) {
+                handleBackToBrands();
+              } else {
+                setSearchQuery('');
+                setSelectedCategory('ALL');
+                setSelectedYear('ALL');
+              }
+            }}
+            className="btn btn-secondary btn-sm"
+          >
+            {brandVehicles.length === 0 ? 'Volver a Marcas' : 'Restablecer filtros'}
+          </button>
+        </div>
+      ) : (
+        <div className="vehicle-cards-grid">
+          {filteredBrandVehicles.map((v) => {
+            const shortModelName = v.name.startsWith(v.brand)
+              ? v.name.slice(v.brand.length).trim()
+              : v.name;
+
+            return (
+              <div
+                key={v.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectVehicle(v.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelectVehicle(v.id);
+                  }
+                }}
+                className="interactive-card"
+                style={{
+                  padding: 'var(--space-5)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: 'var(--space-5)',
+                }}
+              >
+                {/* Top Metadata & Model Title */}
+                <div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 'var(--space-2)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      {BRAND_LOGOS[v.brand] && (
+                        <img
+                          src={BRAND_LOGOS[v.brand]}
+                          alt={v.brand}
+                          style={{ height: '18px', width: '18px', objectFit: 'contain' }}
+                        />
+                      )}
+                      <span
+                        className="mono"
+                        style={{
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        {v.brand} · {v.year}
+                      </span>
+                    </div>
+
                     <span
+                      className="mono"
                       style={{
-                        fontSize: '11px',
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 700,
+                        fontSize: '0.68rem',
+                        color: 'var(--text-muted)',
+                        border: '1px solid var(--border-card)',
+                        background: 'var(--bg-surface)',
+                        padding: '2px 7px',
+                        borderRadius: 'var(--radius-sm)',
                         textTransform: 'uppercase',
-                        color: '#f8fafc',
-                        background: 'rgba(255, 255, 255, 0.08)',
-                        padding: '3px 8px',
-                        borderRadius: '5px',
-                        letterSpacing: '0.04em',
                       }}
                     >
-                      {v.brand}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 600,
-                        color: 'var(--accent-red)',
-                        background: 'rgba(230, 25, 55, 0.1)',
-                        padding: '3px 8px',
-                        borderRadius: '5px',
-                      }}
-                    >
-                      {v.year}
+                      {CATEGORY_LABELS[v.category] || v.category}
                     </span>
                   </div>
 
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      color: '#94a3b8',
-                      background: 'rgba(148, 163, 184, 0.1)',
-                      padding: '3px 8px',
-                      borderRadius: '5px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    {CATEGORY_LABELS[v.category] || v.category}
-                  </span>
+                  <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, margin: 0 }}>
+                    {shortModelName}
+                  </h2>
                 </div>
 
-                {/* Vehicle Name */}
-                <h3
-                  style={{
-                    fontSize: '19px',
-                    fontWeight: 800,
-                    color: '#ffffff',
-                    margin: '0 0 6px 0',
-                    lineHeight: 1.3,
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  {v.name}
-                </h3>
-
-                {/* Vehicle Badge Tagline */}
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: '#cbd5e1',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    marginBottom: '14px',
-                  }}
-                >
-                  <span style={{ color: 'var(--accent-red)' }}>✦</span>
-                  {v.badge}
-                </div>
-
-                {/* Specs Pill Strip */}
+                {/* Technical Specs Table */}
                 <div
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 1fr',
-                    gap: '8px',
-                    background: 'rgba(7, 9, 14, 0.6)',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(255, 255, 255, 0.04)',
-                    marginBottom: '14px',
+                    gap: 'var(--space-3)',
+                    paddingTop: 'var(--space-3)',
+                    paddingBottom: 'var(--space-3)',
+                    borderTop: '1px solid var(--border-subtle)',
+                    borderBottom: '1px solid var(--border-subtle)',
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Dimensiones
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#ffffff', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                      {v.lengthMeters}m x {v.widthMeters}m
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Despiece PPF
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#38bdf8', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                      24 Paneles CAD
-                    </div>
-                  </div>
-                </div>
-
-                {/* Key Features List */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {v.features.slice(0, 3).map((f, i) => (
                     <div
-                      key={i}
                       style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '8px',
-                        fontSize: '12px',
-                        color: '#94a3b8',
-                        lineHeight: 1.4,
+                        fontSize: '0.65rem',
+                        color: 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        marginBottom: '2px',
                       }}
                     >
-                      <Check
-                        size={13}
-                        color="var(--accent-red)"
-                        style={{ marginTop: '2px', flexShrink: 0 }}
-                      />
-                      <span>{f}</span>
+                      Dimensiones
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div
+                      className="mono"
+                      style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', fontWeight: 500 }}
+                    >
+                      {v.lengthMeters.toFixed(2)} × {v.widthMeters.toFixed(2)}m
+                    </div>
+                  </div>
 
-              {/* Action Button */}
-              <div
-                style={{
-                  borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                  paddingTop: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#10b981' }}>
-                  <span
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: '#10b981',
-                      boxShadow: '0 0 6px #10b981',
-                    }}
-                  />
-                  <span>WebGL 3D Listo</span>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '0.65rem',
+                        color: 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        marginBottom: '2px',
+                      }}
+                    >
+                      Factor Escala
+                    </div>
+                    <div
+                      className="mono"
+                      style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', fontWeight: 500 }}
+                    >
+                      {v.scaleFactor.toFixed(2)}×
+                    </div>
+                  </div>
                 </div>
 
+                {/* Footer Action Row */}
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    color: 'var(--accent-red)',
+                    justifyContent: 'space-between',
+                    fontSize: 'var(--text-xs)',
                   }}
                 >
-                  <span>Abrir en Studio</span>
-                  <ArrowRight size={15} />
+                  <span className="mono" style={{ color: 'var(--text-muted)' }}>
+                    Showroom 3D
+                  </span>
+
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    <span>Configurar</span>
+                    <ArrowUpRight size={14} color="var(--accent-red)" />
+                  </span>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

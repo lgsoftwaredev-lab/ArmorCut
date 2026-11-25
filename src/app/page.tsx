@@ -1,39 +1,39 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  PPFRoll, 
-  PPFJobConsumption, 
-  CreateRollInput, 
-  CreateJobInput 
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  PPFRoll,
+  PPFJobConsumption,
+  CreateRollInput,
+  CreateJobInput,
 } from '@/types/ppf';
 import { StockService } from '@/lib/stockService';
-import { Header } from '@/components/Header';
+import { Header, AppTab } from '@/components/Header';
 import { RollCard } from '@/components/RollCard';
 import { NewRollModal } from '@/components/NewRollModal';
 import { NewJobModal, InitialJobData } from '@/components/NewJobModal';
 import { JobsHistoryView } from '@/components/JobsHistoryView';
 import { MetricsView } from '@/components/MetricsView';
 import { VehicleStudioView } from '@/components/matrix/VehicleStudioView';
-import { PlusCarsLogo, PlusCarsMonogram } from '@/components/brand/PlusCarsBrand';
-import { 
-  Layers, 
-  Scissors, 
-  TrendingUp, 
-  Search, 
-  Plus, 
-  RotateCcw,
+import { PlusCarsLogo } from '@/components/brand/PlusCarsBrand';
+import { DemoTourOverlay, DemoActionDetail } from '@/components/DemoTourOverlay';
+import {
+  Layers,
+  Scissors,
+  Search,
+  Plus,
   AlertCircle,
-  Box
+  RotateCcw,
 } from 'lucide-react';
 
 export default function ArmorCutDashboard() {
-  const [activeTab, setActiveTab] = useState<'ROLLS' | 'JOBS' | 'METRICS' | 'STUDIO'>('ROLLS');
+  const [activeTab, setActiveTab] = useState<AppTab>('ROLLS');
 
   // Core Data State
   const [rolls, setRolls] = useState<PPFRoll[]>([]);
   const [jobs, setJobs] = useState<PPFJobConsumption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Filters for Rolls
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,11 +46,37 @@ export default function ArmorCutDashboard() {
 
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
   const [preselectedRoll, setPreselectedRoll] = useState<PPFRoll | null>(null);
+  const [editingJob, setEditingJob] = useState<PPFJobConsumption | null>(null);
   const [initialJobData, setInitialJobData] = useState<InitialJobData | null>(null);
+  const [isDemoOpen, setIsDemoOpen] = useState(false);
+  const [hasAutoLaunchedDemo, setHasAutoLaunchedDemo] = useState(false);
+
+  // Listen for interactive demo navigation
+  useEffect(() => {
+    const handleDemoAction = (e: Event) => {
+      const detail = (e as CustomEvent<DemoActionDetail>).detail;
+      if (detail?.type === 'SET_TAB' && detail.tab) {
+        setActiveTab(detail.tab);
+      }
+    };
+    window.addEventListener('armorcut:demo-action', handleDemoAction);
+    return () => window.removeEventListener('armorcut:demo-action', handleDemoAction);
+  }, []);
+
+  // Auto-launch ?demo=1 only AFTER initial inventory & jobs data finish loading
+  useEffect(() => {
+    if (isLoading || hasAutoLaunchedDemo) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') === '1') {
+      setHasAutoLaunchedDemo(true);
+      setIsDemoOpen(true);
+    }
+  }, [isLoading, hasAutoLaunchedDemo]);
 
   // Load Data
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const [fetchedRolls, fetchedJobs] = await Promise.all([
         StockService.getRolls(),
@@ -60,211 +86,211 @@ export default function ArmorCutDashboard() {
       setJobs(fetchedJobs);
     } catch (err) {
       console.error('Error loading inventory data:', err);
+      setLoadError('No se pudo sincronizar el inventario. Verifica la conexión e intenta nuevamente.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    StockService.getRolls()
-      .then(async (fetchedRolls) => {
-        const fetchedJobs = await StockService.getJobs();
-        if (!ignore) {
-          setRolls(fetchedRolls);
-          setJobs(fetchedJobs);
-          setIsLoading(false);
-        }
-      })
-      .catch((err) => {
-        console.error('Error loading inventory data:', err);
-        if (!ignore) setIsLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
   }, []);
 
-  // Handlers for Rolls
-  const handleSaveRoll = async (rollData: CreateRollInput) => {
-    if (editingRoll) {
-      await StockService.updateRoll(editingRoll.id, rollData);
-    } else {
-      await StockService.addRoll(rollData);
-    }
-    await loadData();
-    setEditingRoll(null);
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  const handleDeleteRoll = async (rollId: string) => {
-    await StockService.deleteRoll(rollId);
-    await loadData();
-  };
+  // Handlers for Rolls
+  const handleSaveRoll = useCallback(
+    async (rollData: CreateRollInput) => {
+      if (editingRoll) {
+        await StockService.updateRoll(editingRoll.id, rollData);
+      } else {
+        await StockService.addRoll(rollData);
+      }
+      await loadData();
+      setEditingRoll(null);
+    },
+    [editingRoll, loadData]
+  );
+
+  const handleDeleteRoll = useCallback(
+    async (rollId: string) => {
+      await StockService.deleteRoll(rollId);
+      await loadData();
+    },
+    [loadData]
+  );
 
   // Handlers for Jobs
-  const handleSaveJob = async (jobData: CreateJobInput) => {
-    await StockService.recordJob(jobData);
-    await loadData();
-  };
+  const handleSaveJob = useCallback(
+    async (jobData: CreateJobInput) => {
+      if (editingJob) {
+        await StockService.updateJob(editingJob.id, jobData);
+      } else {
+        await StockService.recordJob(jobData);
+      }
+      await loadData();
+      setEditingJob(null);
+    },
+    [editingJob, loadData]
+  );
 
-  // Stats calculation
-  const stats = StockService.calculateStats(rolls, jobs, 3.0);
+  const handleDeleteJob = useCallback(
+    async (job: PPFJobConsumption) => {
+      await StockService.deleteJob(job.id);
+      await loadData();
+    },
+    [loadData]
+  );
 
-  // Filtered Rolls
-  const filteredRolls = rolls.filter((roll) => {
-    const matchesSearch =
-      roll.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      roll.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      roll.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      roll.location.toLowerCase().includes(searchQuery.toLowerCase());
+  // Memoized Stats calculation
+  const stats = useMemo(
+    () => StockService.calculateStats(rolls, jobs, 3.0),
+    [rolls, jobs]
+  );
 
-    const matchesFinish = finishFilter === 'ALL' || roll.finish === finishFilter;
-    const matchesStatus =
-      statusFilter === 'ALL' ||
-      (statusFilter === 'ACTIVE' && roll.status === 'ACTIVE') ||
-      (statusFilter === 'SEALED' && roll.status === 'SEALED') ||
-      (statusFilter === 'DEPLETED' && (roll.status === 'DEPLETED' || roll.currentMeters <= 0));
+  // Memoized Filtered Rolls
+  const filteredRolls = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return rolls.filter((roll) => {
+      const matchesSearch =
+        !q ||
+        roll.code.toLowerCase().includes(q) ||
+        roll.brand.toLowerCase().includes(q) ||
+        roll.model.toLowerCase().includes(q) ||
+        roll.location.toLowerCase().includes(q);
 
-    return matchesSearch && matchesFinish && matchesStatus;
-  });
+      const matchesFinish = finishFilter === 'ALL' || roll.finish === finishFilter;
+      const matchesStatus =
+        statusFilter === 'ALL' ||
+        (statusFilter === 'ACTIVE' && roll.status === 'ACTIVE') ||
+        (statusFilter === 'SEALED' && roll.status === 'SEALED') ||
+        (statusFilter === 'DEPLETED' && (roll.status === 'DEPLETED' || roll.currentMeters <= 0));
+
+      return matchesSearch && matchesFinish && matchesStatus;
+    });
+  }, [rolls, searchQuery, finishFilter, statusFilter]);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
-      {/* Top Header */}
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Integrated Architectural Topbar */}
       <Header
         shopName={process.env.NEXT_PUBLIC_SHOP_NAME || 'PLUSCARS DETAILING'}
         totalMeters={stats.totalStockMeters}
         activeRollsCount={stats.activeRolls}
         lowStockCount={stats.lowStockRolls.length}
         totalJobsCount={jobs.length}
+        rollsCount={rolls.length}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        onRefresh={loadData}
+        onStartDemo={() => setIsDemoOpen(true)}
+        isLoading={isLoading}
       />
 
       {/* Main Container */}
       <main className="app-main">
-        {/* Navigation Tabs */}
-        <div className="nav-tabs-wrapper">
-          {/* Tab buttons */}
-          <div className="nav-tabs-list">
-            <button
-              onClick={() => setActiveTab('ROLLS')}
-              className="nav-tab-btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-md)',
-                border: activeTab === 'ROLLS' ? '1px solid var(--accent-red)' : '1px solid transparent',
-                background: activeTab === 'ROLLS' ? 'rgba(230, 25, 55, 0.15)' : 'transparent',
-                color: activeTab === 'ROLLS' ? 'var(--accent-red)' : 'var(--text-secondary)',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                transition: 'all var(--transition-fast)',
-              }}
-            >
-              <Layers size={17} />
-              <span>Bobinas & Stock ({rolls.length})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('JOBS')}
-              className="nav-tab-btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-md)',
-                border: activeTab === 'JOBS' ? '1px solid var(--accent-red)' : '1px solid transparent',
-                background: activeTab === 'JOBS' ? 'rgba(230, 25, 55, 0.15)' : 'transparent',
-                color: activeTab === 'JOBS' ? 'var(--accent-red)' : 'var(--text-secondary)',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                transition: 'all var(--transition-fast)',
-              }}
-            >
-              <Scissors size={17} />
-              <span>Cortes & Salidas ({jobs.length})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('METRICS')}
-              className="nav-tab-btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-md)',
-                border: activeTab === 'METRICS' ? '1px solid var(--accent-red)' : '1px solid transparent',
-                background: activeTab === 'METRICS' ? 'rgba(230, 25, 55, 0.15)' : 'transparent',
-                color: activeTab === 'METRICS' ? 'var(--accent-red)' : 'var(--text-secondary)',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                transition: 'all var(--transition-fast)',
-              }}
-            >
-              <TrendingUp size={17} />
-              <span>Métricas & Reportes</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('STUDIO')}
-              className="nav-tab-btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-md)',
-                border: activeTab === 'STUDIO' ? '1px solid var(--accent-red)' : '1px solid transparent',
-                background: activeTab === 'STUDIO' ? 'rgba(230, 25, 55, 0.15)' : 'transparent',
-                color: activeTab === 'STUDIO' ? 'var(--accent-red)' : 'var(--text-secondary)',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                transition: 'all var(--transition-fast)',
-              }}
-            >
-              <Box size={17} />
-              <span>Studio</span>
-            </button>
-          </div>
-
-          {/* Quick Refresh */}
-          <button
-            onClick={loadData}
-            disabled={isLoading}
-            className="btn btn-secondary btn-sm"
-            title="Refrescar datos desde la base de datos"
-          >
-            <RotateCcw size={14} style={{ animation: isLoading ? 'spin 1s linear infinite' : 'none' }} />
-            <span>{isLoading ? 'Actualizando...' : 'Actualizar'}</span>
-          </button>
-        </div>
-
-        {/* Tab 1: ROLLS VIEW */}
-        {activeTab === 'ROLLS' && (
-          <div>
-            {/* Search and Filters */}
-            <div className="filter-controls-row" style={{
+        {/* Global Load Error Banner */}
+        {loadError && (
+          <div
+            role="alert"
+            style={{
+              background: 'var(--color-danger-bg)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-4) var(--space-5)',
+              marginBottom: 'var(--space-6)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: '12px',
-              marginBottom: '20px',
-            }}>
-              {/* Search box */}
-              <div className="filter-search-box" style={{ position: 'relative', flex: 1, minWidth: '240px', maxWidth: '420px' }}>
-                <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
+              gap: 'var(--space-3)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', color: '#fca5a5', fontSize: 'var(--text-sm)' }}>
+              <AlertCircle size={16} color="var(--color-danger)" />
+              <span>{loadError}</span>
+            </div>
+            <button type="button" onClick={loadData} className="btn btn-secondary btn-sm">
+              <RotateCcw size={12} />
+              <span>Reintentar</span>
+            </button>
+          </div>
+        )}
+
+        {/* Tab 1: ROLLS VIEW */}
+        {activeTab === 'ROLLS' && (
+          <div>
+            {/* Focal Section Header */}
+            <div className="section-header">
+              <div>
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: 'var(--text-muted)',
+                    marginBottom: '4px',
+                  }}
+                >
+                  STOCK DE MATERIAL · {stats.totalStockMeters}M DISPONIBLES
+                </div>
+                <h1 style={{ fontSize: 'var(--text-xl)', margin: 0 }}>
+                  Inventario de Bobinas
+                </h1>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreselectedRoll(null);
+                    setInitialJobData(null);
+                    setIsNewJobModalOpen(true);
+                  }}
+                  className="btn btn-secondary"
+                >
+                  <Scissors size={14} />
+                  <span>Registrar Corte</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingRoll(null);
+                    setIsNewRollModalOpen(true);
+                  }}
+                  className="btn btn-primary"
+                >
+                  <Plus size={15} />
+                  <span>Nueva Bobina</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Toolbar */}
+            <div
+              className="filter-controls-row"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 'var(--space-3)',
+                marginBottom: 'var(--space-6)',
+              }}
+            >
+              <div
+                className="filter-search-box"
+                style={{ position: 'relative', flex: 1, minWidth: '240px', maxWidth: '380px' }}
+              >
+                <Search
+                  size={15}
+                  color="var(--text-muted)"
+                  style={{ position: 'absolute', left: '12px', top: '11px' }}
+                />
                 <input
                   type="text"
-                  placeholder="Buscar bobina por código, marca, modelo o estante..."
+                  aria-label="Buscar bobina"
+                  placeholder="Buscar por código, marca, modelo o ubicación..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="form-input"
@@ -272,86 +298,64 @@ export default function ArmorCutDashboard() {
                 />
               </div>
 
-              {/* Status and Finish Selectors */}
-              <div className="filter-selects-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                 <select
+                  aria-label="Filtrar por estado"
                   className="form-select"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   style={{ width: 'auto' }}
                 >
-                  <option value="ACTIVE">Activas (En uso)</option>
-                  <option value="SEALED">Selladas (Cerradas)</option>
-                  <option value="DEPLETED">Agotadas (0m)</option>
-                  <option value="ALL">Todos los estados</option>
+                  <option value="ACTIVE">Estado: Activas</option>
+                  <option value="SEALED">Estado: Selladas</option>
+                  <option value="DEPLETED">Estado: Agotadas</option>
+                  <option value="ALL">Estado: Todas</option>
                 </select>
 
                 <select
+                  aria-label="Filtrar por acabado"
                   className="form-select"
                   value={finishFilter}
                   onChange={(e) => setFinishFilter(e.target.value)}
                   style={{ width: 'auto' }}
                 >
-                  <option value="ALL">Todos los acabados</option>
-                  <option value="GLOSS">Gloss (Brillante)</option>
-                  <option value="MATTE">Matte (Satinado)</option>
+                  <option value="ALL">Acabado: Todos</option>
+                  <option value="GLOSS">Gloss</option>
+                  <option value="MATTE">Matte</option>
                   <option value="BLACK_PIANO">Black Piano</option>
                   <option value="SMOKE_HEADLIGHT">Smoke Ópticas</option>
                 </select>
-
-                <button
-                  onClick={() => {
-                    setEditingRoll(null);
-                    setIsNewRollModalOpen(true);
-                  }}
-                  className="btn btn-primary btn-sm filter-add-btn"
-                >
-                  <Plus size={15} />
-                  <span>+ Agregar Bobina</span>
-                </button>
               </div>
             </div>
 
-            {/* Low stock alert banner */}
-            {stats.lowStockRolls.length > 0 && (
-              <div style={{
-                background: 'rgba(230, 25, 55, 0.08)',
-                border: '1px solid rgba(230, 25, 55, 0.3)',
-                borderRadius: 'var(--radius-md)',
-                padding: '12px 18px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                marginBottom: '20px',
-              }}>
-                <AlertCircle size={20} color="var(--accent-red)" style={{ flexShrink: 0 }} />
-                <div style={{ fontSize: '0.85rem' }}>
-                  <strong style={{ color: 'var(--accent-red)' }}>
-                    Alerta de reposición:
-                  </strong>{' '}
-                  Hay {stats.lowStockRolls.length} bobina(s) con menos de 3.00 metros disponibles (
-                  {stats.lowStockRolls.map((r) => `${r.code} - ${r.currentMeters}m`).join(', ')}). Recuerda pedir reposición al proveedor.
-                </div>
+            {/* Loading State, Empty State, or Rolls Grid */}
+            {isLoading && rolls.length === 0 ? (
+              <div className="rolls-grid" aria-busy="true" aria-label="Cargando bobinas">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="skeleton-block" style={{ height: '210px' }} />
+                ))}
               </div>
-            )}
-
-            {/* Rolls Grid */}
-            {filteredRolls.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '50px 20px',
-                background: 'var(--bg-card)',
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid var(--border-card)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-              }}>
-                <PlusCarsMonogram height={42} style={{ marginBottom: '14px', opacity: 0.8 }} />
-                <h3 style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>No se encontraron bobinas</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                  Ajusta los filtros de búsqueda o agrega una nueva bobina para comenzar a controlar stock.
+            ) : filteredRolls.length === 0 ? (
+              <div className="state-box">
+                <Layers size={24} color="var(--text-dim)" />
+                <h3 style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>
+                  Sin bobinas que coincidan con la búsqueda
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', maxWidth: '360px' }}>
+                  Cambiá los criterios de filtrado o registrá una nueva bobina en el inventario.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('ALL');
+                    setFinishFilter('ALL');
+                    setSearchQuery('');
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ marginTop: 'var(--space-2)' }}
+                >
+                  Restablecer filtros
+                </button>
               </div>
             ) : (
               <div className="rolls-grid">
@@ -360,12 +364,13 @@ export default function ArmorCutDashboard() {
                     key={roll.id}
                     roll={roll}
                     lowStockThreshold={3.0}
-                    onRecordJobForRoll={(r) => {
-                      setPreselectedRoll(r);
+                    onRecordJobForRoll={(selectedRoll) => {
+                      setPreselectedRoll(selectedRoll);
+                      setInitialJobData(null);
                       setIsNewJobModalOpen(true);
                     }}
-                    onEditRoll={(r) => {
-                      setEditingRoll(r);
+                    onEditRoll={(rollToEdit) => {
+                      setEditingRoll(rollToEdit);
                       setIsNewRollModalOpen(true);
                     }}
                     onDeleteRoll={handleDeleteRoll}
@@ -376,27 +381,35 @@ export default function ArmorCutDashboard() {
           </div>
         )}
 
-        {/* Tab 2: JOBS HISTORY */}
+        {/* Tab 2: JOBS HISTORY VIEW */}
         {activeTab === 'JOBS' && (
           <JobsHistoryView
             jobs={jobs}
             onOpenNewJob={() => {
+              setEditingJob(null);
               setPreselectedRoll(null);
+              setInitialJobData(null);
               setIsNewJobModalOpen(true);
             }}
+            onEditJob={(jobToEdit) => {
+              setEditingJob(jobToEdit);
+              setPreselectedRoll(null);
+              setInitialJobData(null);
+              setIsNewJobModalOpen(true);
+            }}
+            onDeleteJob={handleDeleteJob}
           />
         )}
 
         {/* Tab 3: METRICS */}
-        {activeTab === 'METRICS' && (
-          <MetricsView stats={stats} />
-        )}
+        {activeTab === 'METRICS' && <MetricsView stats={stats} />}
 
         {/* Tab 4: 3D SHOWROOM & CAD STUDIO */}
         {activeTab === 'STUDIO' && (
           <VehicleStudioView
             rolls={rolls}
             onOpenNewJobWithData={(data) => {
+              setEditingJob(null);
               setInitialJobData(data);
               if (data.rollId) {
                 setPreselectedRoll(rolls.find((r) => r.id === data.rollId) || null);
@@ -409,40 +422,41 @@ export default function ArmorCutDashboard() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer style={{
-        borderTop: '1px solid var(--border-subtle)',
-        background: 'rgba(10, 13, 18, 0.95)',
-        padding: '24px 20px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '12px',
-        textAlign: 'center',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Layers size={16} color="var(--accent-red)" />
-            <strong style={{ fontSize: '0.85rem', letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
-              ARMORCUT PPF PRO
-            </strong>
-          </div>
-          <span style={{ color: 'var(--border-subtle)' }}>•</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Desarrollado para</span>
-            <PlusCarsLogo height={16} />
-          </div>
+      {/* Minimalist Architectural Footer */}
+      <footer
+        style={{
+          borderTop: '1px solid var(--border-subtle)',
+          background: 'var(--bg-main)',
+          padding: 'var(--space-5) var(--space-8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 'var(--space-3)',
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-muted)',
+          maxWidth: '1400px',
+          width: '100%',
+          margin: '0 auto',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <strong style={{ color: 'var(--text-secondary)', letterSpacing: '0.06em' }}>
+            ARMORCUT
+          </strong>
+          <span>·</span>
+          <span>Control de Stock & Precorte PPF</span>
         </div>
-        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
-          Centro de Instalación Oficial • Sistema de Control de Stock & Cortes de Bobinas PPF
-        </p>
+        <PlusCarsLogo height={12} />
       </footer>
 
       {/* Modals */}
       <NewRollModal
         isOpen={isNewRollModalOpen}
-        onClose={() => setIsNewRollModalOpen(false)}
+        onClose={() => {
+          setIsNewRollModalOpen(false);
+          setEditingRoll(null);
+        }}
         onSave={handleSaveRoll}
         editingRoll={editingRoll}
       />
@@ -451,12 +465,21 @@ export default function ArmorCutDashboard() {
         isOpen={isNewJobModalOpen}
         onClose={() => {
           setIsNewJobModalOpen(false);
+          setEditingJob(null);
+          setPreselectedRoll(null);
           setInitialJobData(null);
         }}
+        onSaveJob={handleSaveJob}
         rolls={rolls}
         preselectedRoll={preselectedRoll}
+        editingJob={editingJob}
         initialJobData={initialJobData}
-        onSaveJob={handleSaveJob}
+      />
+
+      <DemoTourOverlay
+        isOpen={isDemoOpen}
+        onClose={() => setIsDemoOpen(false)}
+        autoPlay={true}
       />
     </div>
   );

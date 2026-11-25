@@ -1,37 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { DemoActionDetail } from '@/components/DemoTourOverlay';
 import {
-  VehiclePanel,
   PPFRoll,
   MaterialGrade,
-  VehicleProfile,
 } from '@/types/ppf';
 import {
   VEHICLE_CATALOG,
   STANDARD_PANELS,
   PACKAGE_PRESETS,
-  MATERIALS,
 } from '@/data/materialsAndPanels';
 import { calculatePPFJob } from '@/utils/ppfCalculations';
 import { CarBlueprintViewer } from './CarBlueprintViewer';
 import { Vehicle3DShowroom } from './Vehicle3DShowroom';
 import { RollNestingVisualizer } from './RollNestingVisualizer';
 import { PlotterBridgeModal } from './PlotterBridgeModal';
-import { VehicleCatalogSelector } from './VehicleCatalogSelector';
+import { VehicleCatalogSelector, BRAND_LOGOS } from './VehicleCatalogSelector';
 import {
   Box,
   LayoutGrid,
   Scissors,
   Check,
   RotateCcw,
-  Sparkles,
-  Clock,
-  Shield,
-  Layers,
-  ChevronRight,
   Cpu,
-  ArrowRight,
   ArrowLeft,
 } from 'lucide-react';
 
@@ -50,17 +42,13 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
   rolls,
   onOpenNewJobWithData,
 }) => {
-  // Navigation Screen State (Catalog Selector vs Studio Workspace)
   const [studioScreen, setStudioScreen] = useState<'CATALOG' | 'STUDIO'>('CATALOG');
-
-  // Vehicle Selection State
+  const [catalogBrand, setCatalogBrand] = useState<string | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('golf_gti_mk7');
   const vehicle = VEHICLE_CATALOG[selectedVehicleId] || VEHICLE_CATALOG.golf_gti_mk7;
 
-  // View Display Mode (3D vs 2D CAD)
   const [displayMode, setDisplayMode] = useState<'3D' | 'CAD'>('3D');
 
-  // Selected Panels & Hover
   const [selectedPanelIds, setSelectedPanelIds] = useState<string[]>([
     'hood',
     'bumper_front',
@@ -70,60 +58,94 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
     'headlights',
   ]);
   const [hoveredPanelId, setHoveredPanelId] = useState<string | null>(null);
-
-  // Category Filter for Panels
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('ALL');
-
-  // Material Grade (Premium vs Común)
   const [materialGrade, setMaterialGrade] = useState<MaterialGrade>('PREMIUM');
 
-  // Active Roll in Workshop for live stock comparison
   const [selectedRollId, setSelectedRollId] = useState<string>(() => {
     const active = rolls.find((r) => r.status === 'ACTIVE');
     return active ? active.id : rolls[0]?.id || '';
   });
 
-  // Plotter Bridge Modal
   const [isPlotterModalOpen, setIsPlotterModalOpen] = useState(false);
 
-  const activeRoll = rolls.find((r) => r.id === selectedRollId) || rolls[0];
+  // Listen for interactive Demo Tour actions
+  useEffect(() => {
+    const handleDemoAction = (e: Event) => {
+      const detail = (e as CustomEvent<DemoActionDetail>).detail;
+      if (!detail) return;
+      if (detail.type === 'STUDIO_CATALOG') {
+        setCatalogBrand(detail.brand ?? null);
+        setStudioScreen('CATALOG');
+      } else if (detail.type === 'STUDIO_VEHICLE' && detail.vehicleId) {
+        const chosen = VEHICLE_CATALOG[detail.vehicleId];
+        if (chosen) setCatalogBrand(chosen.brand);
+        setSelectedVehicleId(detail.vehicleId);
+        setDisplayMode('3D');
+        setStudioScreen('STUDIO');
+      } else if (detail.type === 'STUDIO_SET_PANELS' && detail.panelIds) {
+        setSelectedPanelIds(detail.panelIds);
+      } else if (detail.type === 'STUDIO_HOVER_PANEL') {
+        setHoveredPanelId(detail.panelId ?? null);
+      } else if (detail.type === 'STUDIO_SCROLL_NESTING') {
+        const el = document.getElementById('studio-nesting-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (detail.type === 'STUDIO_SCROLL_TOP') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    window.addEventListener('armorcut:demo-action', handleDemoAction);
+    return () => window.removeEventListener('armorcut:demo-action', handleDemoAction);
+  }, []);
 
-  // Calculation Engine
-  const calcResult = calculatePPFJob({
-    panelIds: selectedPanelIds,
-    materialGrade,
-    vehicleModelId: selectedVehicleId,
-    wasteMarginPercent: 10,
-  });
+  const activeRoll = useMemo(
+    () => rolls.find((r) => r.id === selectedRollId) || rolls[0],
+    [rolls, selectedRollId]
+  );
 
-  const togglePanel = (panelId: string) => {
-    if (selectedPanelIds.includes(panelId)) {
-      setSelectedPanelIds(selectedPanelIds.filter((id) => id !== panelId));
-    } else {
-      setSelectedPanelIds([...selectedPanelIds, panelId]);
-    }
-  };
+  const availableActiveRolls = useMemo(
+    () => rolls.filter((r) => r.status === 'ACTIVE'),
+    [rolls]
+  );
 
-  const handleSelectPreset = (panelIds: string[]) => {
+  const calcResult = useMemo(
+    () =>
+      calculatePPFJob({
+        panelIds: selectedPanelIds,
+        materialGrade,
+        vehicleModelId: selectedVehicleId,
+        wasteMarginPercent: 10,
+      }),
+    [selectedPanelIds, materialGrade, selectedVehicleId]
+  );
+
+  const togglePanel = useCallback((panelId: string) => {
+    setSelectedPanelIds((prev) =>
+      prev.includes(panelId) ? prev.filter((id) => id !== panelId) : [...prev, panelId]
+    );
+  }, []);
+
+  const handleSelectPreset = useCallback((panelIds: string[]) => {
     setSelectedPanelIds(panelIds);
-  };
+  }, []);
 
-  const handleClearPanels = () => {
+  const handleClearPanels = useCallback(() => {
     setSelectedPanelIds([]);
-  };
+  }, []);
 
-  // Filter panels for checklist
-  const filteredPanels = STANDARD_PANELS.filter((p) => {
-    if (activeCategoryFilter === 'ALL') return true;
-    if (activeCategoryFilter === 'MICRO') return p.isMicroDetail;
-    if (activeCategoryFilter === 'FRONT') return p.category === 'front';
-    if (activeCategoryFilter === 'SIDES') return p.category === 'sides';
-    if (activeCategoryFilter === 'REAR_ROOF') return p.category === 'rear' || p.category === 'roof';
-    if (activeCategoryFilter === 'AERO') return p.category === 'aero';
-    return true;
-  });
+  const filteredPanels = useMemo(
+    () =>
+      STANDARD_PANELS.filter((p) => {
+        if (activeCategoryFilter === 'ALL') return true;
+        if (activeCategoryFilter === 'MICRO') return p.isMicroDetail;
+        if (activeCategoryFilter === 'FRONT') return p.category === 'front';
+        if (activeCategoryFilter === 'SIDES') return p.category === 'sides';
+        if (activeCategoryFilter === 'REAR_ROOF') return p.category === 'rear' || p.category === 'roof';
+        if (activeCategoryFilter === 'AERO') return p.category === 'aero';
+        return true;
+      }),
+    [activeCategoryFilter]
+  );
 
-  // Transfer to NewJobModal in Production
   const handleTransferToJob = () => {
     if (selectedPanelIds.length === 0) {
       alert('Selecciona al menos una pieza para transferir a la orden de trabajo.');
@@ -134,16 +156,12 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
       (p) => p.spanishName || p.name
     );
 
-    const cleanVehicleName = vehicle.name.toLowerCase().startsWith(vehicle.brand.toLowerCase())
-      ? `${vehicle.name} (${vehicle.year})`
-      : `${vehicle.brand} ${vehicle.name} (${vehicle.year})`;
-
     onOpenNewJobWithData({
-      vehicle: cleanVehicleName,
+      vehicle: vehicle.name,
       parts: panelNames,
       metersUsed: calcResult.billedLinearMeters,
       rollId: selectedRollId,
-      notes: `Patrón calculado en Estudio CAD/Nesting ArmorCut (${calcResult.selectedPanels.length} piezas, ${calcResult.sqMetersTotal} m² neta, rendimiento bobina ${calcResult.nesting.efficiencyPercent}%)`,
+      notes: `Orden generada desde Studio (${calcResult.selectedPanels.length} piezas, ${calcResult.sqMetersTotal} m² netos, eficiencia ${calcResult.nesting.efficiencyPercent}%)`,
     });
   };
 
@@ -151,7 +169,12 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
     return (
       <VehicleCatalogSelector
         vehicles={Object.values(VEHICLE_CATALOG)}
+        initialBrand={catalogBrand}
         onSelectVehicle={(vehicleId) => {
+          const chosen = VEHICLE_CATALOG[vehicleId];
+          if (chosen) {
+            setCatalogBrand(chosen.brand);
+          }
           setSelectedVehicleId(vehicleId);
           setStudioScreen('STUDIO');
         }}
@@ -159,200 +182,183 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
     );
   }
 
+  const sameBrandModels = Object.values(VEHICLE_CATALOG).filter(
+    (v) => v.brand === vehicle.brand
+  );
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
-      {/* 1. TOP HERO: VEHICLE SELECTOR & MODE SWITCH */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', width: '100%' }}>
+      {/* 1. ARCHITECTURAL STUDIO BAR */}
       <div
         style={{
-          background: '#0d1017',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '16px',
-          padding: '18px 24px',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-card)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-3) var(--space-5)',
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '16px',
+          gap: 'var(--space-4)',
         }}
       >
-        {/* Left: Back to Catalog Button + Vehicle Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => setStudioScreen('CATALOG')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 14px',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: '#cbd5e1',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 600,
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(230, 25, 55, 0.15)';
-              e.currentTarget.style.borderColor = 'var(--accent-red)';
-              e.currentTarget.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-              e.currentTarget.style.color = '#cbd5e1';
-            }}
-            title="Volver a la selección y catálogo de vehículos"
-          >
-            <ArrowLeft size={14} />
-            <span>Catálogo</span>
-          </button>
+        {/* Left: Back Navigation + Brand Emblem + Active Vehicle Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setCatalogBrand(null);
+                setStudioScreen('CATALOG');
+              }}
+              className="btn btn-secondary btn-sm"
+              title="Volver al catálogo de marcas"
+            >
+              <ArrowLeft size={13} />
+              <span>Marcas</span>
+            </button>
 
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span
+            <button
+              type="button"
+              onClick={() => {
+                setCatalogBrand(vehicle.brand);
+                setStudioScreen('CATALOG');
+              }}
+              className="btn btn-secondary btn-sm"
+              title={`Ver todos los modelos de ${vehicle.brand}`}
+            >
+              <span>{vehicle.brand}</span>
+            </button>
+          </div>
+
+          <div style={{ width: '1px', height: '24px', background: 'var(--border-card)' }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {BRAND_LOGOS[vehicle.brand] && (
+              <img
+                src={BRAND_LOGOS[vehicle.brand]}
+                alt={vehicle.brand}
+                style={{ height: '28px', width: '28px', objectFit: 'contain' }}
+              />
+            )}
+            <div>
+              <div
+                className="mono"
                 style={{
-                  fontSize: '11px',
-                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.68rem',
                   textTransform: 'uppercase',
-                  color: 'var(--accent-red)',
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.06em',
                 }}
               >
-                Estudio 3D & Matriz CAD de Corte
-              </span>
-              <span
-                style={{
-                  fontSize: '10px',
-                  fontFamily: 'var(--font-mono)',
-                  background: 'rgba(230, 25, 55, 0.15)',
-                  color: 'var(--accent-red)',
-                  border: '1px solid var(--accent-red-border)',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  fontWeight: 600,
-                }}
-              >
-                {vehicle.badge}
-              </span>
+                {vehicle.brand} · {vehicle.year}
+              </div>
+              <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+                {vehicle.name}
+              </h2>
             </div>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: 0 }}>
-              {vehicle.name}
-            </h2>
           </div>
         </div>
 
-        {/* Center: Vehicle Models Carousel / Quick Buttons */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-          {Object.values(VEHICLE_CATALOG).map((v) => {
-            const isSelected = selectedVehicleId === v.id;
-            return (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setSelectedVehicleId(v.id)}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  fontWeight: isSelected ? 700 : 500,
-                  color: isSelected ? '#ffffff' : '#94a3b8',
-                  background: isSelected ? 'var(--accent-red)' : '#141822',
-                  border: isSelected ? '1px solid var(--accent-red-hover)' : '1px solid rgba(255, 255, 255, 0.08)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: isSelected ? '0 0 14px var(--accent-red-glow)' : 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                {v.id === 'golf_gti_mk7' && '🏎️ Golf GTI MK7'}
-                {v.id === 'toyota_sw4' && '🚙 Toyota SW4 (Fortuner)'}
-                {v.id === 'bmw_m2_f87' && '⚡ BMW M2 (F87)'}
-                {v.id === 'bmw_m2_g87' && '🔥 BMW M2 Coupé (G87)'}
-                {!['golf_gti_mk7', 'toyota_sw4', 'bmw_m2_f87', 'bmw_m2_g87'].includes(v.id) && `🚘 ${v.name}`}
-              </button>
-            );
-          })}
-        </div>
+        {/* Center: Clean Model Switcher for Current Brand */}
+        {sameBrandModels.length > 1 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {sameBrandModels.map((v) => {
+              const isSelected = selectedVehicleId === v.id;
+              const shortLabel = v.name.startsWith(v.brand)
+                ? v.name.slice(v.brand.length).trim()
+                : v.name;
 
-        {/* Right: Mode Switch (3D Showroom vs 2D CAD) */}
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setSelectedVehicleId(v.id)}
+                  className="btn btn-sm"
+                  style={{
+                    fontWeight: isSelected ? 600 : 500,
+                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                    background: isSelected ? 'var(--bg-card-hover)' : 'var(--bg-surface)',
+                    borderColor: isSelected ? 'var(--text-secondary)' : 'var(--border-subtle)',
+                  }}
+                >
+                  {shortLabel}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Right: Viewport Mode Toggle */}
         <div
           style={{
             display: 'flex',
-            background: '#07090e',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '4px',
-            borderRadius: '10px',
-            gap: '4px',
+            background: 'var(--bg-main)',
+            border: '1px solid var(--border-card)',
+            padding: '2px',
+            borderRadius: 'var(--radius-md)',
+            gap: '2px',
           }}
         >
           <button
             type="button"
             onClick={() => setDisplayMode('3D')}
+            className="btn btn-sm"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: displayMode === '3D' ? 700 : 500,
-              color: displayMode === '3D' ? '#ffffff' : '#8893a4',
-              background: displayMode === '3D' ? 'var(--accent-red)' : 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: displayMode === '3D' ? '0 0 10px var(--accent-red-glow)' : 'none',
+              padding: '5px 12px',
+              borderRadius: 'var(--radius-sm)',
+              color: displayMode === '3D' ? '#ffffff' : 'var(--text-muted)',
+              background: displayMode === '3D' ? 'var(--bg-card-hover)' : 'transparent',
             }}
           >
-            <Box style={{ width: 14, height: 14 }} />
-            Showroom 3D
+            <Box size={13} />
+            <span>Vista 3D</span>
           </button>
 
           <button
             type="button"
             onClick={() => setDisplayMode('CAD')}
+            className="btn btn-sm"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: displayMode === 'CAD' ? 700 : 500,
-              color: displayMode === 'CAD' ? '#ffffff' : '#8893a4',
-              background: displayMode === 'CAD' ? 'var(--accent-red)' : 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: displayMode === 'CAD' ? '0 0 10px var(--accent-red-glow)' : 'none',
+              padding: '5px 12px',
+              borderRadius: 'var(--radius-sm)',
+              color: displayMode === 'CAD' ? '#ffffff' : 'var(--text-muted)',
+              background: displayMode === 'CAD' ? 'var(--bg-card-hover)' : 'transparent',
             }}
           >
-            <LayoutGrid style={{ width: 14, height: 14 }} />
-            Plano CAD 2.5D
+            <LayoutGrid size={13} />
+            <span>Plano 2D</span>
           </button>
         </div>
       </div>
 
-      {/* 2. PRESETS BAR & QUICK ACTIONS */}
+      {/* 2. PRESETS BAR */}
       <div
         style={{
-          background: '#0a0d14',
-          border: '1px solid rgba(255, 255, 255, 0.06)',
-          borderRadius: '12px',
-          padding: '12px 20px',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '10px 16px',
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '12px',
+          gap: '10px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '11px', color: '#626d7d', fontWeight: 600 }}>Kits Preconfigurados:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span
+            className="mono"
+            style={{
+              fontSize: '0.7rem',
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              marginRight: '4px',
+            }}
+          >
+            Kits:
+          </span>
           {PACKAGE_PRESETS.map((preset) => {
             const isPresetActive =
               preset.recommendedPanelIds.every((id) => selectedPanelIds.includes(id)) &&
@@ -363,19 +369,17 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
                 key={preset.id}
                 type="button"
                 onClick={() => handleSelectPreset(preset.recommendedPanelIds)}
+                className="btn btn-sm"
                 style={{
-                  padding: '5px 12px',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontWeight: isPresetActive ? 700 : 500,
-                  color: isPresetActive ? '#ffffff' : '#cbd5e1',
-                  background: isPresetActive ? 'var(--accent-red-subtle)' : '#141822',
-                  border: isPresetActive ? '1px solid var(--accent-red)' : '1px solid rgba(255, 255, 255, 0.06)',
-                  cursor: 'pointer',
+                  padding: '5px 11px',
+                  borderRadius: 'var(--radius-sm)',
+                  color: isPresetActive ? '#ffffff' : 'var(--text-secondary)',
+                  background: isPresetActive ? 'var(--accent-red)' : 'var(--bg-card)',
+                  borderColor: isPresetActive ? 'var(--accent-red)' : 'var(--border-card)',
                 }}
                 title={preset.description}
               >
-                {preset.name}
+                {preset.name.replace(' (El más solicitado)', '')}
               </button>
             );
           })}
@@ -384,32 +388,23 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
         <button
           type="button"
           onClick={handleClearPanels}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '5px 12px',
-            borderRadius: '6px',
-            fontSize: '11px',
-            color: '#8893a4',
-            background: 'transparent',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            cursor: 'pointer',
-          }}
+          disabled={selectedPanelIds.length === 0}
+          className="btn btn-secondary btn-sm"
+          style={{ padding: '4px 10px' }}
         >
-          <RotateCcw style={{ width: 12, height: 12 }} />
-          Limpiar Selección
+          <RotateCcw size={12} />
+          <span>Limpiar</span>
         </button>
       </div>
 
-      {/* 3. MAIN WORKSPACE: CANVAS (LEFT) & METRICS/CHECKLIST (RIGHT) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: '24px' }}>
-        {/* Left Column: 3D or 2D CAD Viewport */}
+      {/* 3. MAIN WORKSPACE: VIEWPORT (LEFT) & SPECIFICATION SIDEBAR (RIGHT) */}
+      <div className="studio-workspace-grid">
+        {/* Left Column: 3D or 2D CAD Viewport + Nesting */}
         <div
           style={{
-            background: '#0a0d14',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '16px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-card)',
+            borderRadius: 'var(--radius-lg)',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
@@ -435,159 +430,213 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
           )}
 
           {/* Bottom Nesting Roll Simulator Strip */}
-          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+          <div id="studio-nesting-section" style={{ borderTop: '1px solid var(--border-subtle)' }}>
             <RollNestingVisualizer
               selectedPanels={calcResult.selectedPanels}
               nesting={calcResult.nesting}
               billedLinearMeters={calcResult.billedLinearMeters}
               activeRoll={activeRoll}
               onSelectRoll={setSelectedRollId}
-              availableRolls={rolls.filter((r) => r.status === 'ACTIVE')}
+              availableRolls={availableActiveRolls}
             />
           </div>
         </div>
 
-        {/* Right Column: Order Calculator & Panel Breakdown */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Summary / Price Card */}
+        {/* Right Column: Specification & Panel Checklist */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {/* Specification & Cost Summary Card */}
           <div
             style={{
-              background: '#0d1017',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '16px',
-              padding: '20px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-card)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-5)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px',
+              gap: 'var(--space-4)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', color: '#8893a4', fontWeight: 600 }}>
-                Consumo & Estimación
+              <span
+                className="mono"
+                style={{
+                  fontSize: '0.7rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--text-muted)',
+                  fontWeight: 600,
+                }}
+              >
+                Resumen de Corte
               </span>
-              <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontWeight: 700 }}>
+              <span
+                className="mono"
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--text-primary)',
+                  fontWeight: 600,
+                }}
+              >
                 {calcResult.selectedPanels.length} piezas
               </span>
             </div>
 
-            {/* Big Metrics Display */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div style={{ background: '#07090e', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '10px', padding: '12px' }}>
-                <span style={{ fontSize: '10px', color: '#626d7d', display: 'block', marginBottom: '2px' }}>Metros Lineales</span>
-                <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--accent-red)', fontFamily: 'var(--font-mono)' }}>
+            {/* Key Metrics */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '10px',
+              }}
+            >
+              <div
+                style={{
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 12px',
+                }}
+              >
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>
+                  Consumo Lineal
+                </span>
+                <span
+                  className="mono"
+                  style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}
+                >
                   {calcResult.billedLinearMeters.toFixed(2)}m
                 </span>
-                <span style={{ fontSize: '9px', color: '#8893a4', display: 'block', marginTop: '2px' }}>
-                  (incluye 10% margen)
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block' }}>
+                  +10% margen
                 </span>
               </div>
 
-              <div style={{ background: '#07090e', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '10px', padding: '12px' }}>
-                <span style={{ fontSize: '10px', color: '#626d7d', display: 'block', marginBottom: '2px' }}>Tiempo Instalación</span>
-                <span style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-mono)' }}>
+              <div
+                style={{
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 12px',
+                }}
+              >
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>
+                  Tiempo Estimado
+                </span>
+                <span
+                  className="mono"
+                  style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}
+                >
                   {calcResult.totalLaborHours.toFixed(1)}h
                 </span>
-                <span style={{ fontSize: '9px', color: '#8893a4', display: 'block', marginTop: '2px' }}>
-                  {calcResult.sqMetersTotal.toFixed(1)} m² chapa
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block' }}>
+                  {calcResult.sqMetersTotal.toFixed(1)} m² netos
                 </span>
               </div>
             </div>
 
-            {/* Financial Details */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '12px', fontSize: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#8893a4' }}>
-                <span>Material ({materialGrade}):</span>
-                <span style={{ color: '#ffffff', fontFamily: 'var(--font-mono)' }}>${calcResult.materialCost.toFixed(2)}</span>
+            {/* Material Grade Selector */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '4px',
+                background: 'var(--bg-main)',
+                padding: '3px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              {(['PREMIUM', 'COMUN'] as const).map((grade) => (
+                <button
+                  key={grade}
+                  type="button"
+                  onClick={() => setMaterialGrade(grade)}
+                  style={{
+                    padding: '6px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: materialGrade === grade ? 600 : 500,
+                    color: materialGrade === grade ? 'var(--text-primary)' : 'var(--text-muted)',
+                    background: materialGrade === grade ? 'var(--bg-card-hover)' : 'transparent',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {grade === 'PREMIUM' ? 'Film Premium 8.5m' : 'Film Standard 7.5m'}
+                </button>
+              ))}
+            </div>
+
+            {/* Cost Breakdown */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                borderTop: '1px solid var(--border-subtle)',
+                paddingTop: '12px',
+                fontSize: '0.75rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                <span>Film PPF ({materialGrade})</span>
+                <span className="mono" style={{ color: 'var(--text-primary)' }}>
+                  ${calcResult.materialCost.toFixed(2)}
+                </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#8893a4' }}>
-                <span>Mano de Obra Certificada:</span>
-                <span style={{ color: '#ffffff', fontFamily: 'var(--font-mono)' }}>${calcResult.laborCost.toFixed(2)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                <span>Mano de obra</span>
+                <span className="mono" style={{ color: 'var(--text-primary)' }}>
+                  ${calcResult.laborCost.toFixed(2)}
+                </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#8893a4' }}>
-                <span>Preparación & Descontaminado:</span>
-                <span style={{ color: '#ffffff', fontFamily: 'var(--font-mono)' }}>${calcResult.prepCost.toFixed(2)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                <span>Preparación</span>
+                <span className="mono" style={{ color: 'var(--text-primary)' }}>
+                  ${calcResult.prepCost.toFixed(2)}
+                </span>
               </div>
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  color: '#ffffff',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  color: 'var(--text-primary)',
+                  borderTop: '1px solid var(--border-subtle)',
                   paddingTop: '8px',
                   marginTop: '4px',
                 }}
               >
-                <span>Total Estimado Taller:</span>
-                <span style={{ color: 'var(--accent-red-hover)', fontFamily: 'var(--font-mono)' }}>
+                <span>Total Estimado</span>
+                <span className="mono" style={{ color: 'var(--text-primary)' }}>
                   ${calcResult.totalPrice.toFixed(2)}
                 </span>
               </div>
             </div>
 
-            {/* CTAs: Transfer to NewJobModal & Export to Plotter */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+            {/* Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '2px' }}>
               <button
                 type="button"
                 onClick={handleTransferToJob}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '12px 18px',
-                  borderRadius: '10px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  color: '#ffffff',
-                  background: 'var(--accent-red)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: '0 4px 20px var(--accent-red-glow)',
-                }}
+                disabled={selectedPanelIds.length === 0}
+                className="btn btn-primary"
+                style={{ width: '100%' }}
               >
-                <Scissors style={{ width: 16, height: 16 }} />
-                Descontar en Bobina / Crear Orden
+                <Scissors size={14} />
+                <span>Crear Orden de Corte</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsPlotterModalOpen(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '10px 16px',
-                  borderRadius: '10px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: '#cbd5e1',
-                  background: '#141822',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  cursor: 'pointer',
-                  position: 'relative',
-                }}
+                disabled={selectedPanelIds.length === 0}
+                className="btn btn-secondary"
+                style={{ width: '100%' }}
               >
-                <Cpu style={{ width: 15, height: 15, color: '#38bdf8' }} />
-                <span>Exportar Comandos a Plotter</span>
-                <span
-                  style={{
-                    fontSize: '9px',
-                    fontFamily: 'var(--font-mono)',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    background: 'rgba(56, 189, 248, 0.15)',
-                    color: '#38bdf8',
-                    border: '1px solid rgba(56, 189, 248, 0.3)',
-                    letterSpacing: '0.04em',
-                    fontWeight: 700,
-                  }}
-                >
-                  FASE 4 · ROADMAP
-                </span>
+                <Cpu size={14} />
+                <span>Exportar a Plotter</span>
               </button>
             </div>
           </div>
@@ -595,31 +644,40 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
           {/* Panel Despiece Checklist */}
           <div
             style={{
-              background: '#0d1017',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '16px',
-              padding: '18px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-card)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-4)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
-              maxHeight: '440px',
+              gap: '10px',
+              maxHeight: '420px',
               overflow: 'hidden',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', color: '#8893a4', fontWeight: 600 }}>
-                Despiece Individual ({selectedPanelIds.length}/{STANDARD_PANELS.length})
+              <span
+                className="mono"
+                style={{
+                  fontSize: '0.7rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--text-muted)',
+                  fontWeight: 600,
+                }}
+              >
+                Piezas ({selectedPanelIds.length}/{STANDARD_PANELS.length})
               </span>
             </div>
 
-            {/* Category filter pills */}
+            {/* Category filter tabs */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
               {(
                 [
                   { id: 'ALL', label: 'Todos' },
                   { id: 'FRONT', label: 'Frente' },
                   { id: 'SIDES', label: 'Lados' },
-                  { id: 'REAR_ROOF', label: 'Techo/Tras.' },
+                  { id: 'REAR_ROOF', label: 'Trasera' },
                   { id: 'MICRO', label: 'Micro' },
                 ] as const
               ).map((f) => (
@@ -628,13 +686,16 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
                   type="button"
                   onClick={() => setActiveCategoryFilter(f.id)}
                   style={{
-                    padding: '3px 8px',
-                    borderRadius: '5px',
-                    fontSize: '10px',
-                    fontWeight: activeCategoryFilter === f.id ? 700 : 500,
-                    color: activeCategoryFilter === f.id ? '#ffffff' : '#626d7d',
-                    background: activeCategoryFilter === f.id ? '#1f2432' : 'transparent',
-                    border: 'none',
+                    padding: '4px 9px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.7rem',
+                    fontWeight: activeCategoryFilter === f.id ? 600 : 500,
+                    color: activeCategoryFilter === f.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                    background: activeCategoryFilter === f.id ? 'var(--bg-card-hover)' : 'transparent',
+                    border:
+                      activeCategoryFilter === f.id
+                        ? '1px solid var(--border-highlight)'
+                        : '1px solid transparent',
                     cursor: 'pointer',
                   }}
                 >
@@ -643,13 +704,22 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
               ))}
             </div>
 
-            {/* Panel List Scrollable */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', paddingRight: '4px' }}>
+            {/* Scrollable Panel List */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                overflowY: 'auto',
+                paddingRight: '4px',
+              }}
+            >
               {filteredPanels.map((panel) => {
                 const isSel = selectedPanelIds.includes(panel.id);
                 return (
-                  <div
+                  <button
                     key={panel.id}
+                    type="button"
                     onClick={() => togglePanel(panel.id)}
                     onMouseEnter={() => setHoveredPanelId(panel.id)}
                     onMouseLeave={() => setHoveredPanelId(null)}
@@ -657,52 +727,63 @@ export const VehicleStudioView: React.FC<VehicleStudioViewProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
+                      width: '100%',
+                      textAlign: 'left',
                       padding: '8px 10px',
-                      borderRadius: '8px',
-                      background: isSel ? 'rgba(230, 25, 55, 0.12)' : '#07090e',
-                      border: isSel ? '1px solid var(--accent-red-border)' : '1px solid rgba(255, 255, 255, 0.05)',
+                      borderRadius: 'var(--radius-md)',
+                      background: isSel ? 'var(--bg-card-hover)' : 'var(--bg-surface)',
+                      border: isSel
+                        ? '1px solid var(--border-highlight)'
+                        : '1px solid var(--border-subtle)',
                       cursor: 'pointer',
-                      transition: 'all 0.12s ease',
+                      transition: 'border-color 0.1s ease',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div
                         style={{
-                          width: 16,
-                          height: 16,
-                          borderRadius: '4px',
-                          border: isSel ? 'none' : '1px solid #434c59',
+                          width: 14,
+                          height: 14,
+                          borderRadius: '3px',
+                          border: isSel ? 'none' : '1px solid var(--text-dim)',
                           background: isSel ? 'var(--accent-red)' : 'transparent',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
+                          flexShrink: 0,
                         }}
                       >
-                        {isSel && <Check style={{ width: 12, height: 12, color: '#ffffff' }} />}
+                        {isSel && <Check size={10} color="#ffffff" strokeWidth={3} />}
                       </div>
                       <div>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: isSel ? '#ffffff' : '#cbd5e1' }}>
+                        <div
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: isSel ? 600 : 500,
+                            color: isSel ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          }}
+                        >
                           {panel.spanishName || panel.name}
                         </div>
-                        <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#626d7d' }}>
-                          {panel.cutLength}m lineal · {panel.sqMeters} m² · {panel.laborHours}h
+                        <div
+                          className="mono"
+                          style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}
+                        >
+                          {panel.cutLength}m · {panel.sqMeters}m²
                         </div>
                       </div>
                     </div>
 
                     <span
+                      className="mono"
                       style={{
-                        fontSize: '9px',
-                        fontFamily: 'var(--font-mono)',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        background: '#141822',
-                        color: panel.difficulty === 'EXPERTO' ? '#ef4444' : panel.difficulty === 'ALTA' ? '#f59e0b' : '#94a3b8',
+                        fontSize: '0.62rem',
+                        color: 'var(--text-muted)',
                       }}
                     >
-                      {panel.difficulty}
+                      {panel.laborHours}h
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
