@@ -174,7 +174,7 @@ const RollModalContent: React.FC<{
           {/* Quick Preset Selector */}
           {!editingRoll && (
             <div style={{ marginBottom: '16px' }}>
-              <label className="form-label" style={{ marginBottom: '6px' }}>Formato Rápido Kryptonite</label>
+              <label className="form-label" style={{ marginBottom: '6px' }}>Formato Rápido</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <button
                   type="button"
@@ -182,9 +182,9 @@ const RollModalContent: React.FC<{
                   style={{
                     padding: '10px 14px',
                     borderRadius: 'var(--radius-md)',
-                    border: widthMeters === 1.56 ? '1px solid var(--accent-red)' : '1px solid var(--border-subtle)',
-                    background: widthMeters === 1.56 ? 'rgba(230, 25, 55, 0.15)' : 'var(--bg-input)',
-                    color: widthMeters === 1.56 ? 'var(--accent-red)' : 'var(--text-secondary)',
+                    border: widthMeters === 1.56 ? '1px solid var(--text-primary)' : '1px solid var(--border-subtle)',
+                    background: widthMeters === 1.56 ? 'var(--bg-card-hover)' : 'var(--bg-input)',
+                    color: widthMeters === 1.56 ? 'var(--text-primary)' : 'var(--text-secondary)',
                     fontWeight: 600,
                     fontSize: '0.8rem',
                     textAlign: 'left',
@@ -192,10 +192,10 @@ const RollModalContent: React.FC<{
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <strong>🚘 Carrocería Estándar</strong>
+                    <strong>Carrocería Estándar</strong>
                     {widthMeters === 1.56 && <Check size={14} />}
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>156 cm ancho × 15 mts</span>
+                  <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>156 cm × 15 m</span>
                 </button>
 
                 <button
@@ -204,9 +204,9 @@ const RollModalContent: React.FC<{
                   style={{
                     padding: '10px 14px',
                     borderRadius: 'var(--radius-md)',
-                    border: widthMeters === 1.20 ? '1px solid var(--accent-red)' : '1px solid var(--border-subtle)',
-                    background: widthMeters === 1.20 ? 'rgba(230, 25, 55, 0.15)' : 'var(--bg-input)',
-                    color: widthMeters === 1.20 ? 'var(--accent-red)' : 'var(--text-secondary)',
+                    border: widthMeters === 1.20 ? '1px solid var(--text-primary)' : '1px solid var(--border-subtle)',
+                    background: widthMeters === 1.20 ? 'var(--bg-card-hover)' : 'var(--bg-input)',
+                    color: widthMeters === 1.20 ? 'var(--text-primary)' : 'var(--text-secondary)',
                     fontWeight: 600,
                     fontSize: '0.8rem',
                     textAlign: 'left',
@@ -214,10 +214,10 @@ const RollModalContent: React.FC<{
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <strong>🪟 Vidrios Parabrisas</strong>
+                    <strong>Vidrios Parabrisas</strong>
                     {widthMeters === 1.20 && <Check size={14} />}
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>120 cm ancho × 15 mts</span>
+                  <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>120 cm × 15 m</span>
                 </button>
               </div>
             </div>

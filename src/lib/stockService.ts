@@ -464,6 +464,163 @@ export class StockService {
     return { job: newJob, updatedRoll };
   }
 
+  // Update an existing Job (and reconcile roll stock difference)
+  static async updateJob(jobId: string, updates: CreateJobInput): Promise<void> {
+    const jobs = await this.getJobs();
+    const oldJob = jobs.find((j) => j.id === jobId);
+    if (!oldJob) {
+      throw new Error(`Orden de corte no encontrada: ${jobId}`);
+    }
+
+    const rolls = await this.getRolls();
+    const oldRoll = rolls.find((r) => r.id === oldJob.rollId || r.code === oldJob.rollCode);
+    const newRoll = rolls.find((r) => r.id === updates.rollId || r.code === updates.rollCode);
+
+    const newMetersUsed = Number(updates.metersUsed);
+    const oldMetersUsed = Number(oldJob.metersUsed);
+
+    const targetRoll = newRoll || oldRoll;
+    const costPerMeter =
+      targetRoll && targetRoll.initialMeters > 0
+        ? targetRoll.costPerRoll / targetRoll.initialMeters
+        : 86.66;
+    const newCostCalculated = Number((costPerMeter * newMetersUsed).toFixed(2));
+
+    const updatedRolls = rolls.map((r) => {
+      // Same roll: adjust by delta
+      if (oldRoll && newRoll && oldRoll.id === newRoll.id && r.id === oldRoll.id) {
+        const delta = newMetersUsed - oldMetersUsed;
+        const adjusted = Math.max(
+          0,
+          Math.min(r.initialMeters, Number((r.currentMeters - delta).toFixed(2)))
+        );
+        const status: PPFRoll['status'] =
+          adjusted <= 0.05 ? 'DEPLETED' : r.status === 'DEPLETED' ? 'ACTIVE' : r.status;
+        return { ...r, currentMeters: adjusted, status };
+      }
+
+      // Roll changed: restore to old roll
+      if (oldRoll && r.id === oldRoll.id) {
+        const restored = Math.min(
+          r.initialMeters,
+          Number((r.currentMeters + oldMetersUsed).toFixed(2))
+        );
+        const status: PPFRoll['status'] =
+          restored > 0.05 && r.status === 'DEPLETED' ? 'ACTIVE' : r.status;
+        return { ...r, currentMeters: restored, status };
+      }
+
+      // Roll changed: deduct from new roll
+      if (newRoll && r.id === newRoll.id) {
+        const deducted = Math.max(0, Number((r.currentMeters - newMetersUsed).toFixed(2)));
+        const status: PPFRoll['status'] = deducted <= 0.05 ? 'DEPLETED' : r.status;
+        return { ...r, currentMeters: deducted, status };
+      }
+
+      return r;
+    });
+
+    const updatedJob: PPFJobConsumption = {
+      ...oldJob,
+      ...updates,
+      metersUsed: newMetersUsed,
+      costCalculated: newCostCalculated,
+    };
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        await supabase
+          .from('ppf_jobs')
+          .update({
+            roll_id: updatedJob.rollId,
+            roll_code: updatedJob.rollCode,
+            brand: updatedJob.brand,
+            finish: updatedJob.finish,
+            vehicle: updatedJob.vehicle,
+            license_plate: updatedJob.licensePlate,
+            client_name: updatedJob.clientName,
+            work_order_number: updatedJob.workOrderNumber,
+            installer: updatedJob.installer,
+            parts: updatedJob.parts,
+            meters_used: updatedJob.metersUsed,
+            cost_calculated: updatedJob.costCalculated,
+            notes: updatedJob.notes,
+          })
+          .eq('id', jobId);
+
+        for (const r of updatedRolls) {
+          if (r.id === oldRoll?.id || r.id === newRoll?.id) {
+            await supabase
+              .from('ppf_rolls')
+              .update({
+                current_meters: r.currentMeters,
+                status: r.status,
+              })
+              .eq('id', r.id);
+          }
+        }
+      } catch (err) {
+        console.error('Supabase updateJob error:', err);
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_KEY_ROLLS, JSON.stringify(updatedRolls));
+      const updatedJobs = jobs.map((j) => (j.id === jobId ? updatedJob : j));
+      localStorage.setItem(LOCAL_STORAGE_KEY_JOBS, JSON.stringify(updatedJobs));
+    }
+  }
+
+  // Delete a Job (and restore its meters back to the roll)
+  static async deleteJob(jobId: string): Promise<void> {
+    const jobs = await this.getJobs();
+    const jobToDelete = jobs.find((j) => j.id === jobId);
+    if (!jobToDelete) return;
+
+    const rolls = await this.getRolls();
+    const roll = rolls.find((r) => r.id === jobToDelete.rollId || r.code === jobToDelete.rollCode);
+
+    const updatedRolls = rolls.map((r) => {
+      if (roll && r.id === roll.id) {
+        const restored = Math.min(
+          r.initialMeters,
+          Number((r.currentMeters + Number(jobToDelete.metersUsed)).toFixed(2))
+        );
+        const status: PPFRoll['status'] =
+          restored > 0.05 && r.status === 'DEPLETED' ? 'ACTIVE' : r.status;
+        return { ...r, currentMeters: restored, status };
+      }
+      return r;
+    });
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        await supabase.from('ppf_jobs').delete().eq('id', jobId);
+
+        if (roll) {
+          const restoredRoll = updatedRolls.find((r) => r.id === roll.id);
+          if (restoredRoll) {
+            await supabase
+              .from('ppf_rolls')
+              .update({
+                current_meters: restoredRoll.currentMeters,
+                status: restoredRoll.status,
+              })
+              .eq('id', roll.id);
+          }
+        }
+      } catch (err) {
+        console.error('Supabase deleteJob error:', err);
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_KEY_ROLLS, JSON.stringify(updatedRolls));
+      const remainingJobs = jobs.filter((j) => j.id !== jobId);
+      localStorage.setItem(LOCAL_STORAGE_KEY_JOBS, JSON.stringify(remainingJobs));
+    }
+  }
+
   // Stats calculation
   static calculateStats(rolls: PPFRoll[], jobs: PPFJobConsumption[], lowStockThreshold = 3.0): PPFStats {
     const totalRolls = rolls.length;

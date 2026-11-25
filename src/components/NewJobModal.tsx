@@ -1,16 +1,26 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PPFRoll, CreateJobInput } from '@/types/ppf';
-import { Scissors, X, Check, Plus } from 'lucide-react';
+import { PPFRoll, PPFJobConsumption, CreateJobInput } from '@/types/ppf';
+import { Scissors, X, Check, Plus, Save } from 'lucide-react';
 import { PlusCarsMonogram } from '@/components/brand/PlusCarsBrand';
+
+export interface InitialJobData {
+  vehicle?: string;
+  parts?: string[];
+  metersUsed?: number;
+  notes?: string;
+  rollId?: string;
+}
 
 interface NewJobModalProps {
   isOpen: boolean;
   onClose: () => void;
   rolls: PPFRoll[];
   preselectedRoll?: PPFRoll | null;
+  editingJob?: PPFJobConsumption | null;
   onSaveJob: (jobData: CreateJobInput) => Promise<void>;
+  initialJobData?: InitialJobData | null;
 }
 
 const COMMON_PARTS = [
@@ -30,30 +40,70 @@ const COMMON_PARTS = [
 const JobModalContent: React.FC<{
   rolls: PPFRoll[];
   preselectedRoll?: PPFRoll | null;
+  editingJob?: PPFJobConsumption | null;
+  initialJobData?: InitialJobData | null;
   onClose: () => void;
   onSaveJob: (jobData: CreateJobInput) => Promise<void>;
-}> = ({ rolls, preselectedRoll, onClose, onSaveJob }) => {
-  const activeRolls = rolls.filter((r) => r.status === 'ACTIVE' || r.id === preselectedRoll?.id);
-
-  const [selectedRollId, setSelectedRollId] = useState(
-    () => preselectedRoll?.id || (activeRolls.length > 0 ? activeRolls[0].id : '')
+}> = ({ rolls, preselectedRoll, editingJob, initialJobData, onClose, onSaveJob }) => {
+  const activeRolls = rolls.filter(
+    (r) =>
+      r.status === 'ACTIVE' ||
+      r.id === preselectedRoll?.id ||
+      r.id === initialJobData?.rollId ||
+      r.id === editingJob?.rollId ||
+      r.code === editingJob?.rollCode
   );
-  const [vehicle, setVehicle] = useState('');
-  const [licensePlate, setLicensePlate] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [workOrderNumber, setWorkOrderNumber] = useState('');
-  const [installer, setInstaller] = useState('Lucas');
-  const [selectedParts, setSelectedParts] = useState<string[]>(['Capot Completo']);
+
+  const [selectedRollId, setSelectedRollId] = useState(() => {
+    if (editingJob) {
+      const matched = rolls.find(
+        (r) => r.id === editingJob.rollId || r.code === editingJob.rollCode
+      );
+      if (matched) return matched.id;
+    }
+    return (
+      initialJobData?.rollId ||
+      preselectedRoll?.id ||
+      (activeRolls.length > 0 ? activeRolls[0].id : '')
+    );
+  });
+
+  const [vehicle, setVehicle] = useState(editingJob?.vehicle || initialJobData?.vehicle || '');
+  const [licensePlate, setLicensePlate] = useState(editingJob?.licensePlate || '');
+  const [clientName, setClientName] = useState(editingJob?.clientName || '');
+  const [workOrderNumber, setWorkOrderNumber] = useState(editingJob?.workOrderNumber || '');
+  const [installer, setInstaller] = useState(editingJob?.installer || 'Lucas');
+  const [selectedParts, setSelectedParts] = useState<string[]>(
+    editingJob?.parts && editingJob.parts.length > 0
+      ? editingJob.parts
+      : initialJobData?.parts && initialJobData.parts.length > 0
+      ? initialJobData.parts
+      : ['Capot Completo']
+  );
   const [customPart, setCustomPart] = useState('');
-  const [metersUsed, setMetersUsed] = useState(2.2);
-  const [notes, setNotes] = useState('');
+  const [metersUsed, setMetersUsed] = useState(
+    editingJob?.metersUsed ?? initialJobData?.metersUsed ?? 2.2
+  );
+  const [notes, setNotes] = useState(editingJob?.notes || initialJobData?.notes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentRoll = rolls.find((r) => r.id === selectedRollId) || activeRolls[0];
   const metersDeducted = Number(metersUsed) || 0;
-  const costPerMeter = currentRoll && currentRoll.initialMeters > 0 ? currentRoll.costPerRoll / currentRoll.initialMeters : 90;
+  const costPerMeter =
+    currentRoll && currentRoll.initialMeters > 0
+      ? currentRoll.costPerRoll / currentRoll.initialMeters
+      : 90;
   const totalCostEstimate = (costPerMeter * metersDeducted).toFixed(2);
-  const remainingAfterJob = currentRoll ? Math.max(0, currentRoll.currentMeters - metersDeducted) : 0;
+
+  // Available meters on the selected roll (if editing on the same roll, include the meters previously taken by this job)
+  const effectiveAvailableMeters = currentRoll
+    ? editingJob &&
+      (currentRoll.id === editingJob.rollId || currentRoll.code === editingJob.rollCode)
+      ? Number((currentRoll.currentMeters + Number(editingJob.metersUsed)).toFixed(2))
+      : currentRoll.currentMeters
+    : 0;
+
+  const remainingAfterJob = Math.max(0, Number((effectiveAvailableMeters - metersDeducted).toFixed(2)));
 
   const togglePart = (part: string) => {
     if (selectedParts.includes(part)) {
@@ -84,9 +134,9 @@ const JobModalContent: React.FC<{
       alert('Ingresa los metros utilizados.');
       return;
     }
-    if (currentRoll.currentMeters < metersDeducted) {
+    if (effectiveAvailableMeters < metersDeducted) {
       const confirmExceed = confirm(
-        `Atención: La bobina tiene ${currentRoll.currentMeters.toFixed(2)}m disponibles pero el trabajo requiere ${metersDeducted.toFixed(2)}m. ¿Deseas descontar de todos modos?`
+        `Atención: La bobina dispone de ${effectiveAvailableMeters.toFixed(2)}m pero la orden requiere ${metersDeducted.toFixed(2)}m. ¿Deseas guardar de todos modos?`
       );
       if (!confirmExceed) return;
     }
@@ -113,7 +163,7 @@ const JobModalContent: React.FC<{
       onClose();
     } catch (err) {
       console.error('Error saving job:', err);
-      alert('Ocurrió un error al registrar el trabajo.');
+      alert('Ocurrió un error al guardar la orden de corte.');
     } finally {
       setIsSubmitting(false);
     }
@@ -122,83 +172,57 @@ const JobModalContent: React.FC<{
   return (
     <div
       className="modal-backdrop"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0, 0, 0, 0.85)',
-        backdropFilter: 'blur(8px)',
-        padding: '12px',
-      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
-        className="modal-content"
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-card)',
-          borderRadius: 'var(--radius-lg)',
-          width: '100%',
-          maxWidth: '650px',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
-        }}
-      >
+      <div className="modal-content" style={{ maxWidth: '640px' }}>
         {/* Header */}
         <div
-          className="modal-header"
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '20px 24px',
+            padding: 'var(--space-5) var(--space-6)',
             borderBottom: '1px solid var(--border-card)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(230, 25, 55, 0.12)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Scissors size={20} color="var(--accent-red)" />
-            </div>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-              Registrar Salida de Material (Corte)
+            <Scissors size={18} color="var(--accent-red)" />
+            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>
+              {editingJob ? 'Editar Orden de Corte' : 'Registrar Orden de Corte'}
             </h2>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <PlusCarsMonogram height={22} style={{ opacity: 0.85 }} />
+            <PlusCarsMonogram height={20} style={{ opacity: 0.85 }} />
             <button
+              type="button"
+              aria-label="Cerrar modal"
               onClick={onClose}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '6px' }}
             >
-              <X size={20} />
+              <X size={16} />
             </button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="modal-body" style={{ padding: '20px 24px' }}>
+        <form onSubmit={handleSubmit} style={{ padding: 'var(--space-5) var(--space-6)' }}>
           {/* Roll Selector & Live preview */}
           <div className="form-group">
             <label className="form-label">
               <span>Bobina de Origen *</span>
               {currentRoll && (
-                <span style={{ color: currentRoll.currentMeters < 3 ? 'var(--color-warning)' : 'var(--accent-red)' }}>
-                  Disponible: <strong>{currentRoll.currentMeters.toFixed(2)} m</strong> (Ancho: {currentRoll.widthMeters}m)
+                <span
+                  className="mono"
+                  style={{
+                    color:
+                      effectiveAvailableMeters < 3
+                        ? 'var(--color-warning)'
+                        : 'var(--text-secondary)',
+                  }}
+                >
+                  Disponible: <strong>{effectiveAvailableMeters.toFixed(2)}m</strong> ({currentRoll.widthMeters}m)
                 </span>
               )}
             </label>
@@ -210,7 +234,7 @@ const JobModalContent: React.FC<{
             >
               {activeRolls.map((r) => (
                 <option key={r.id} value={r.id}>
-                  [{r.code}] {r.brand} {r.model} ({r.finish}) — {r.currentMeters.toFixed(2)}m restantes — {r.location}
+                  [{r.code}] {r.brand} {r.model} ({r.finish}) — {r.currentMeters.toFixed(2)}m — {r.location}
                 </option>
               ))}
             </select>
@@ -225,13 +249,13 @@ const JobModalContent: React.FC<{
                 className="form-input"
                 value={vehicle}
                 onChange={(e) => setVehicle(e.target.value)}
-                placeholder="Ej: Porsche 911 GT3 / BMW M3"
+                placeholder="Ej: Porsche 911 GT3 / BMW M2"
                 required
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Patente / Placa</label>
+              <label className="form-label">Patente / Dominio</label>
               <input
                 type="text"
                 className="form-input mono"
@@ -251,7 +275,7 @@ const JobModalContent: React.FC<{
                 className="form-input"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
-                placeholder="Nombre del cliente o concesionario"
+                placeholder="Nombre del cliente"
                 required
               />
             </div>
@@ -268,7 +292,7 @@ const JobModalContent: React.FC<{
             </div>
 
             <div className="form-group">
-              <label className="form-label">Técnico Instalador *</label>
+              <label className="form-label">Instalador *</label>
               <input
                 type="text"
                 className="form-input"
@@ -282,18 +306,20 @@ const JobModalContent: React.FC<{
 
           {/* Parts Checkboxes */}
           <div className="form-group">
-            <label className="form-label">Piezas a Proteger</label>
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '6px',
-              marginTop: '4px',
-              background: 'var(--bg-input)',
-              padding: '10px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-card)',
-            }}>
-              {COMMON_PARTS.map((part) => {
+            <label className="form-label">Piezas Cubiertas</label>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '6px',
+                marginTop: '4px',
+                background: 'var(--bg-input)',
+                padding: '10px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-card)',
+              }}
+            >
+              {Array.from(new Set([...COMMON_PARTS, ...selectedParts])).map((part) => {
                 const isSelected = selectedParts.includes(part);
                 return (
                   <button
@@ -304,16 +330,19 @@ const JobModalContent: React.FC<{
                       fontSize: '0.75rem',
                       padding: '4px 9px',
                       borderRadius: 'var(--radius-sm)',
-                      border: isSelected ? '1px solid var(--accent-red)' : '1px solid var(--border-subtle)',
-                      background: isSelected ? 'rgba(230, 25, 55, 0.15)' : 'var(--bg-card)',
-                      color: isSelected ? 'var(--accent-red)' : 'var(--text-secondary)',
+                      border: isSelected
+                        ? '1px solid var(--text-primary)'
+                        : '1px solid var(--border-subtle)',
+                      background: isSelected ? 'var(--bg-card-hover)' : 'var(--bg-card)',
+                      color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontWeight: isSelected ? 600 : 400,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
                     }}
                   >
-                    {isSelected && <Check size={12} />}
+                    {isSelected && <Check size={12} color="var(--accent-red)" />}
                     {part}
                   </button>
                 );
@@ -325,7 +354,7 @@ const JobModalContent: React.FC<{
               <input
                 type="text"
                 className="form-input"
-                placeholder="Agregar otra pieza (ej: Alerón Trasero, Zócalo Interior...)"
+                placeholder="Agregar otra pieza..."
                 value={customPart}
                 onChange={(e) => setCustomPart(e.target.value)}
                 onKeyDown={(e) => {
@@ -334,13 +363,11 @@ const JobModalContent: React.FC<{
                     addCustomPart();
                   }
                 }}
-                style={{ fontSize: '0.8rem', padding: '6px 10px' }}
               />
               <button
                 type="button"
                 onClick={addCustomPart}
                 className="btn btn-secondary btn-sm"
-                style={{ whiteSpace: 'nowrap' }}
               >
                 <Plus size={14} />
                 <span>Agregar</span>
@@ -350,7 +377,7 @@ const JobModalContent: React.FC<{
 
           {/* Meters Used */}
           <div className="form-group">
-            <label className="form-label">Metros Lineales Cortados / Descontados *</label>
+            <label className="form-label">Metros Lineales Cortados *</label>
             <input
               type="number"
               step="0.05"
@@ -363,69 +390,80 @@ const JobModalContent: React.FC<{
           </div>
 
           {/* Live Cut Summary Box */}
-          <div style={{
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            padding: '12px 16px',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}>
+          <div
+            style={{
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-md)',
+              padding: 'var(--space-3) var(--space-4)',
+              marginBottom: 'var(--space-4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 'var(--space-3)',
+            }}
+          >
             <div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Quedará en Bobina:</span>
-              <strong className="mono" style={{ color: remainingAfterJob < 3 ? 'var(--color-warning)' : 'var(--text-primary)' }}>
-                {remainingAfterJob.toFixed(2)} m restantes
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block' }}>
+                Remanente en Bobina
+              </span>
+              <strong
+                className="mono"
+                style={{
+                  color: remainingAfterJob < 3 ? 'var(--color-warning)' : 'var(--text-primary)',
+                }}
+              >
+                {remainingAfterJob.toFixed(2)}m
               </strong>
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Costo Estimado Salida:</span>
-              <strong className="mono" style={{ color: 'var(--accent-red)', fontSize: '1rem' }}>
-                ~${totalCostEstimate} USD
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block' }}>
+                Costo Estimado Material
+              </span>
+              <strong className="mono" style={{ color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}>
+                ${totalCostEstimate} USD
               </strong>
             </div>
           </div>
 
           {/* General Job Notes */}
           <div className="form-group">
-            <label className="form-label">Notas del Trabajo (Opcional)</label>
+            <label className="form-label">Notas (Opcional)</label>
             <input
               type="text"
               className="form-input"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Detalles sobre el corte, observaciones o cliente"
+              placeholder="Observaciones sobre la orden de corte"
             />
           </div>
 
           {/* Action buttons */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: '12px',
-            marginTop: '20px',
-            paddingTop: '16px',
-            borderTop: '1px solid var(--border-card)',
-          }}>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-secondary"
-            >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: 'var(--space-3)',
+              marginTop: 'var(--space-5)',
+              paddingTop: 'var(--space-4)',
+              borderTop: '1px solid var(--border-card)',
+            }}
+          >
+            <button type="button" onClick={onClose} className="btn btn-secondary">
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn btn-primary"
-            >
-              <Scissors size={16} />
-              <span>{isSubmitting ? 'Guardando...' : 'Confirmar y Descontar Stock'}</span>
+            <button type="submit" disabled={isSubmitting} className="btn btn-primary">
+              {editingJob ? <Save size={15} /> : <Scissors size={15} />}
+              <span>
+                {isSubmitting
+                  ? 'Guardando...'
+                  : editingJob
+                  ? 'Guardar Cambios'
+                  : 'Confirmar y Descontar Stock'}
+              </span>
             </button>
           </div>
         </form>
@@ -439,14 +477,18 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
   onClose,
   rolls,
   preselectedRoll,
+  editingJob,
   onSaveJob,
+  initialJobData,
 }) => {
   if (!isOpen) return null;
   return (
     <JobModalContent
-      key={preselectedRoll?.id || 'new-job-modal'}
+      key={editingJob?.id || preselectedRoll?.id || initialJobData?.vehicle || 'new-job-modal'}
       rolls={rolls}
       preselectedRoll={preselectedRoll}
+      editingJob={editingJob}
+      initialJobData={initialJobData}
       onClose={onClose}
       onSaveJob={onSaveJob}
     />
